@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AppRole {
+  super_admin
+  admin
+  gestor
+  colaborador
+  correspondente
+  franqueado
+}
+
+enum UserStatus {
+  active
+  inactive
+  pending
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String?
+  phone        String?
+  jobTitle     String?
+  avatarUrl    String?
+  status       UserStatus @default(active)
+  companyId    String?
+  departmentId String?
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  company     Company?    @relation(fields: [companyId], references: [id])
+  department  Department? @relation(fields: [departmentId], references: [id])
+  roles       UserRole[]
+  documents   Document[]  @relation("DocCreatedBy")
+  auditLogs   AuditLog[]
+  favorites   DocumentFavorite[]
+  acknowledgements DocumentAcknowledgement[]
+  refreshTokens RefreshToken[]
+}
+
+model UserRole {
+  id     String  @id @default(uuid())
+  userId String
+  role   AppRole
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  users     User[]
+  departments Department[]
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String
+  companyId String?
+  createdAt DateTime @default(now())
+  company   Company? @relation(fields: [companyId], references: [id])
+  users     User[]
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  color     String?
+  createdAt DateTime @default(now())
+  documents Document[]
+}
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?
+  createdAt DateTime @default(now())
+  parent    Folder?  @relation("FolderChildren", fields: [parentId], references: [id])
+  children  Folder[] @relation("FolderChildren")
+  documents Document[]
+}
+
+model Document {
+  id                     String   @id @default(uuid())
+  name                   String
+  description            String?
+  filePath               String
+  fileType               String?
+  fileSize               Int?
+  mimeType               String?
+  isOfficial             Boolean  @default(false)
+  requiresAcknowledgement Boolean @default(false)
+  author                 String?
+  downloadCount          Int      @default(0)
+  categoryId             String?
+  folderId               String?
+  createdBy              String
+  updatedBy              String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  category   Category? @relation(fields: [categoryId], references: [id])
+  folder     Folder?   @relation(fields: [folderId], references: [id])
+  creator    User      @relation("DocCreatedBy", fields: [createdBy], references: [id])
+  versions   DocumentVersion[]
+  shares     DocumentShare[]
+  publicLinks DocumentPublicLink[]
+  acknowledgements DocumentAcknowledgement[]
+  favorites  DocumentFavorite[]
+}
+
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  version    Int
+  filePath   String
+  notes      String?
+  createdBy  String
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model DocumentShare {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  canEdit    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  @@unique([documentId, userId])
+}
+
+model DocumentPublicLink {
+  id         String   @id @default(uuid())
+  documentId String
+  token      String   @unique
+  expiresAt  DateTime?
+  createdBy  String
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model DocumentAcknowledgement {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  acknowledgedAt DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([documentId, userId])
+}
+
+model DocumentFavorite {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([documentId, userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+}
+
+model Branding {
+  id            String   @id @default("singleton")
+  appName       String   @default("Premiatto Connect")
+  primaryColor  String   @default("#0B3D91")
+  accentColor   String   @default("#1E88E5")
+  logoUrl       String?
+  logoDarkUrl   String?
+  faviconUrl    String?
+  tagline       String?
+  updatedAt     DateTime @updatedAt
+  updatedBy     String?
+}

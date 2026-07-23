@@ -1,29 +1,63 @@
-# Welcome to your Lovable project
+# Premiatto Connect
 
-This project was built with [Lovable](https://lovable.dev).
+Plataforma de comunicação, documentação, treinamento e gestão do conhecimento da Premiatto.
 
-## Build with Lovable
+Arquitetura self-hosted separada — pronta para deploy no **Easypanel** via Docker e GitHub.
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+```
+premiatto-connect/
+├── backend/          NestJS + Prisma + PostgreSQL + JWT
+├── frontend/         Vite + React 19 + Tailwind v4 + React Router
+├── docker-compose.yml
+└── easypanel.md      guia de deploy passo a passo
+```
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+## Stack
 
-## Development
+- **Backend**: NestJS 10, Prisma 5, PostgreSQL 16, JWT (access + refresh httpOnly), bcrypt, Multer.
+- **Frontend**: React 19, Vite 6, Tailwind CSS v4, TanStack Query, React Router, Axios, Sonner, Lucide.
+- **Deploy**: Docker (multi-stage) + Nginx no frontend.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Rodar localmente (Docker)
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+```bash
+docker compose up --build
+```
+
+- Frontend: http://localhost:8080
+- Backend:  http://localhost:3000/api
+- Postgres: localhost:5432 (usuário `premiatto`, senha `premiatto`)
+
+**Login inicial**: `admin@premiatto.com.br` / `ChangeMe123!` (troque em produção).
+
+## Rodar em desenvolvimento (hot reload)
+
+Em dois terminais:
+
+```bash
+# Backend
+cd backend
+cp .env.example .env
+npm install
+npx prisma migrate dev
+npm run start:dev
+
+# Frontend
+cd frontend
+cp .env.example .env
+npm install
 npm run dev
 ```
 
-## Built with
+## Funcionalidades
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+- **Auth**: registro, login, refresh automático, logout — sem Google, apenas e-mail + senha.
+- **RBAC**: 6 perfis (`super_admin`, `admin`, `gestor`, `colaborador`, `correspondente`, `franqueado`) com `RolesGuard` no backend e proteção de rotas no frontend.
+- **Documentos**: upload, download com auditoria, marcação como oficial, ciência obrigatória, favoritos, versões.
+- **Usuários**: admin gerencia usuários e perfis (adicionar/remover roles com um clique).
+- **Auditoria**: log de todas ações relevantes; visível para admins.
+- **Marca (Branding)**: admin altera nome, tagline, cor primária, cor de destaque, logo, logo escuro e favicon — aplicado em tempo real via CSS variables.
+
+## Deploy no Easypanel
+
+Veja [`easypanel.md`](./easypanel.md).
