@@ -157,7 +157,7 @@ function DocumentCard({ doc }: { doc: Doc }) {
         .createSignedUrl(doc.file_path, 60);
       if (error) throw error;
       window.open(data.signedUrl, "_blank");
-      await supabase.from("documents" as never).update({ download_count: doc.download_count + 1 }).eq("id", doc.id);
+      await (supabase.from("documents" as never).update as any)({ download_count: doc.download_count + 1 }).eq("id", doc.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro no download");
     } finally {
@@ -241,7 +241,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
       const up = await supabase.storage.from("documents").upload(path, file);
       if (up.error) throw up.error;
 
-      const insert = await supabase.from("documents" as never).insert({
+      const insert = await (supabase.from("documents" as never).insert as any)({
         name,
         description: description || null,
         file_path: path,
@@ -256,7 +256,7 @@ function UploadDialog({ onClose }: { onClose: () => void }) {
       });
       if (insert.error) throw insert.error;
 
-      await supabase.from("audit_log" as never).insert({
+      await (supabase.from("audit_log" as never).insert as any)({
         user_id: me.user.id,
         action: "document.upload",
         entity_type: "document",
