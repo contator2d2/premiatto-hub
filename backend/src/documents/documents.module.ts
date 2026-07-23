@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
-import { BrandingController } from './branding.controller';
-import { BrandingService } from './branding.service';
+import { DocumentsController } from './documents.controller';
+import { DocumentsService } from './documents.service';
 
-const brandingDir = () => {
-  const dir = join(process.env.UPLOADS_DIR || join(process.cwd(), 'uploads'), 'branding');
+const docsDir = () => {
+  const dir = join(process.env.UPLOADS_DIR || join(process.cwd(), 'uploads'), 'documents');
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 };
@@ -17,13 +16,13 @@ const brandingDir = () => {
   imports: [
     MulterModule.register({
       storage: diskStorage({
-        destination: (_req, _file, cb) => cb(null, brandingDir()),
+        destination: (_req, _file, cb) => cb(null, docsDir()),
         filename: (_req, file, cb) => cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extname(file.originalname)}`),
       }),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: 100 * 1024 * 1024 },
     }),
   ],
-  controllers: [BrandingController],
-  providers: [BrandingService],
+  controllers: [DocumentsController],
+  providers: [DocumentsService],
 })
-export class BrandingModule {}
+export class DocumentsModule {}
