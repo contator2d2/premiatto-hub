@@ -13,10 +13,10 @@ ENV NODE_ENV=production
 RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm install --omit=dev --no-audit --no-fund && npm install prisma ts-node typescript --no-save --no-audit --no-fund
+RUN npm install --omit=dev --no-audit --no-fund && npm install prisma --no-save --no-audit --no-fund
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 RUN mkdir -p /data/uploads
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node prisma/seed.ts && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node prisma/seed.js && node dist/main.js"]
