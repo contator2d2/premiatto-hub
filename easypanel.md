@@ -21,13 +21,12 @@ Guia passo a passo para hospedar o **Premiatto Connect** em um VPS com Easypanel
 1. **+ Service → App**, nome: `premiatto-backend`.
 2. Aba **Source → GitHub**: aponte para o repositório, branch `main`, **Build Path**: `backend`.
 3. Aba **Build**: tipo `Dockerfile` (usa `backend/Dockerfile`).
-4. Aba **Environment**:
+4. Aba **Environment** — no `DATABASE_URL`, cole apenas a URL como valor, sem aspas e sem `DATABASE_URL=`:
    ```
    DATABASE_URL=postgresql://premiatto:SENHA@premiatto-db:5432/premiatto?schema=public
    PORT=3000
    CORS_ORIGIN=https://app.premiatto.com.br
    JWT_SECRET=<gere com: openssl rand -hex 48>
-   JWT_REFRESH_SECRET=<gere outro>
    JWT_ACCESS_TTL=15m
    JWT_REFRESH_TTL=7d
    UPLOADS_DIR=/data/uploads
@@ -76,5 +75,5 @@ Se preferir servir frontend e API sob o mesmo domínio (`app.premiatto.com.br` �
 
 ## 8. Rotação de segredos
 
-- Para trocar `JWT_SECRET`/`JWT_REFRESH_SECRET`: atualize no Easypanel e reinicie o app. Todos usuários serão deslogados (esperado).
+- Para trocar `JWT_SECRET`: atualize no Easypanel e reinicie o app. Todos usuários serão deslogados (esperado).
 - Para trocar senha de admin: use a tela `/api/auth/change-password` (autenticado) ou atualize direto no DB.

@@ -67,6 +67,28 @@ const WEAK_SECRETS = new Set([
   'ChangeMe123!',
 ]);
 
+function normalizeDatabaseUrl(value: string) {
+  let normalized = value.trim();
+
+  if (normalized.startsWith('DATABASE_URL=')) {
+    normalized = normalized.slice('DATABASE_URL='.length).trim();
+  }
+
+  const quotePairs: Array<[string, string]> = [
+    ['"', '"'],
+    ["'", "'"],
+    ['`', '`'],
+  ];
+
+  for (const [open, close] of quotePairs) {
+    if (normalized.startsWith(open) && normalized.endsWith(close)) {
+      return normalized.slice(1, -1).trim();
+    }
+  }
+
+  return normalized;
+}
+
 export function validateEnv() {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -74,6 +96,11 @@ export function validateEnv() {
 
   for (const spec of SPECS) {
     let value = process.env[spec.name];
+
+    if (spec.name === 'DATABASE_URL' && value) {
+      value = normalizeDatabaseUrl(value);
+      process.env.DATABASE_URL = value;
+    }
 
     if ((value === undefined || value === '') && spec.default !== undefined) {
       process.env[spec.name] = spec.default;
@@ -90,6 +117,9 @@ export function validateEnv() {
       errors.push(
         `  ✗ ${spec.name} formato inválido${spec.hint ? ` — esperado: ${spec.hint}` : ''}`,
       );
+      if (spec.name === 'DATABASE_URL') {
+        errors.push('    Dica: no Easypanel cole apenas a URL, sem aspas e sem DATABASE_URL=');
+      }
     }
 
     if (spec.name === 'JWT_SECRET' && value.length < 32) {

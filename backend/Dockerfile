@@ -14,6 +14,7 @@ ENV NODE_ENV=production
 RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY prisma ./prisma
+COPY scripts ./scripts
 RUN test -f prisma/migrations/20260724061000_initial/migration.sql
 RUN npm install --omit=dev --no-audit --no-fund
 COPY --from=builder /app/dist ./dist
