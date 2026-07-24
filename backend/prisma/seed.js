@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   const email = process.env.SUPER_ADMIN_EMAIL || 'admin@premiatto.com.br';
-  const password = process.env.SUPER_ADMIN_PASSWORD || 'ChangeMe123!';
+  const password = process.env.SUPER_ADMIN_PASSWORD || 'TroquePorUmaSenhaForte123!';
   const name = process.env.SUPER_ADMIN_NAME || 'Administrador';
 
   const existing = await prisma.user.findUnique({ where: { email } });
