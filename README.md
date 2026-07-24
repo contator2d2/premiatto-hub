@@ -28,7 +28,7 @@ docker compose up --build
 - Backend:  http://localhost:3000/api
 - Postgres: localhost:5432 (usuário `premiatto`, senha `premiatto`)
 
-**Login inicial**: `admin@premiatto.com.br` / `ChangeMe123!` (troque em produção).
+**Login inicial local**: `admin@premiatto.com.br` / `TroquePorUmaSenhaForte123!` (troque em produção).
 
 ## Rodar em desenvolvimento (hot reload)
 
