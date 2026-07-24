@@ -4,9 +4,16 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
-  # Proxy API para o backend na rede docker (Easypanel: usar hostname do serviço)
+  # Resolver interno do Docker/Easypanel para resolver o hostname do backend em runtime
+  resolver 127.0.0.11 ipv6=off valid=30s;
+
+  # Proxy /api -> backend. Configure BACKEND_URL no serviço frontend do Easypanel.
+  # Exemplos:
+  #   BACKEND_URL=http://ayratech-premiattoconnect-back:3000
+  #   BACKEND_URL=http://backend:3000
   location /api/ {
-    proxy_pass http://backend:3000/api/;
+    set $backend_upstream "${BACKEND_URL}";
+    proxy_pass $backend_upstream/api/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
