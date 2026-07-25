@@ -60,7 +60,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         <nav className="flex-1 p-2.5 space-y-4 overflow-y-auto">
           {GROUP_ORDER.map((group) => {
-            const items = MODULES.filter((m) => m.group === group);
+            const allowed = user?.allowedModules;
+            const items = MODULES.filter((m) => m.group === group).filter(
+              (m) => isSuperAdmin || !allowed || allowed.includes(m.key),
+            );
             if (items.length === 0) return null;
             return (
               <div key={group} className="space-y-0.5">
@@ -160,6 +163,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   >
                     <ShieldCheck className="h-4 w-4 shrink-0" />
                     {open && <span>Super Admin</span>}
+                  </NavLink>
+                  <NavLink
+                    to="/admin/access-templates"
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    {open && <span>Templates de Acesso</span>}
                   </NavLink>
                   <NavLink
                     to="/admin/branding"
