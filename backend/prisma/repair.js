@@ -137,6 +137,7 @@ async function main() {
     BEGIN
       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'DocumentShare' AND column_name = 'userId') THEN
         UPDATE "DocumentShare" SET "targetUserId" = "userId" WHERE "targetUserId" IS NULL;
+        ALTER TABLE "DocumentShare" ALTER COLUMN "userId" DROP NOT NULL;
       END IF;
     END $$;`,
   );
