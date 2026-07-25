@@ -157,30 +157,9 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Sub-sidebar of scopes */}
-      <aside className="w-60 border-r border-border bg-card p-3 space-y-1 shrink-0">
-        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Central de Arquivos
-        </div>
-        {SCOPES.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => {
-              setScope(s.key);
-              setFolderId(null);
-            }}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              scope === s.key && !folderId
-                ? 'bg-primary/10 text-primary font-medium'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            <s.icon className="h-4 w-4" />
-            {s.label}
-          </button>
-        ))}
-        <div className="px-2 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+      {/* Compact folders sub-sidebar */}
+      <aside className="w-56 border-r border-border bg-card p-3 space-y-1 shrink-0 hidden lg:block">
+        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
           Pastas
           <button
             onClick={() => setShowNewFolder(true)}
@@ -190,13 +169,20 @@ export default function DocumentsPage() {
             <FolderPlus className="h-3.5 w-3.5" />
           </button>
         </div>
+        <button
+          onClick={() => setFolderId(null)}
+          className={cn(
+            'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+            !folderId ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          )}
+        >
+          <Home className="h-4 w-4" />
+          Raiz
+        </button>
         {(folders ?? []).map((f: any) => (
           <button
             key={f.id}
-            onClick={() => {
-              setScope('all');
-              setFolderId(f.id);
-            }}
+            onClick={() => setFolderId(f.id)}
             className={cn(
               'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
               folderId === f.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -207,13 +193,16 @@ export default function DocumentsPage() {
             <span className="text-[10px] text-muted-foreground">{f._count?.documents ?? 0}</span>
           </button>
         ))}
+        {(folders ?? []).length === 0 && (
+          <div className="px-2.5 py-3 text-[11px] text-muted-foreground">Nenhuma pasta ainda.</div>
+        )}
       </aside>
 
       <div className="flex-1 min-w-0 p-6 lg:p-8 space-y-5">
         <header className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight font-display">
-              {folderId && currentFolder ? currentFolder.name : SCOPES.find((s) => s.key === scope)?.label}
+              {folderId && currentFolder ? currentFolder.name : SCOPE_LABELS[scope]}
             </h1>
             {folderId && currentFolder?.breadcrumb && (
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
