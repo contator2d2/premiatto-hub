@@ -169,7 +169,7 @@ model Folder {
   tags         String[] @default([])
   isOfficial   Boolean  @default(false)
   departmentId String?
-  createdBy    String
+  createdBy    String?
   isDeleted    Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
