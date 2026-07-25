@@ -6,7 +6,6 @@ import {
   PanelLeftOpen,
   Building2,
   Search,
-  Bell,
   Lock,
   ShieldCheck,
   Palette,
@@ -15,6 +14,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useBranding } from '@/contexts/branding-context';
 import { cn } from '@/lib/utils';
 import { MODULES, GROUP_LABELS, type ModuleGroup } from '@/lib/modules';
+import { NotificationsBell } from './notifications-bell';
 
 const GROUP_ORDER: ModuleGroup[] = ['workspace', 'conhecimento', 'operacao', 'inteligencia'];
 
@@ -236,9 +236,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          <button className="h-9 w-9 rounded-lg border border-border bg-background hover:bg-muted flex items-center justify-center text-muted-foreground">
-            <Bell className="h-4 w-4" />
-          </button>
+          <NotificationsBell />
         </header>
         <main className="flex-1 min-w-0">{children}</main>
       </div>
