@@ -197,10 +197,13 @@ model Folder {
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  policyId          String?
+  policyInheritance PolicyInheritance @default(full)
 
   parent     Folder?     @relation("FolderChildren", fields: [parentId], references: [id])
   children   Folder[]    @relation("FolderChildren")
   department Department? @relation(fields: [departmentId], references: [id])
+  policy     DocumentPolicy? @relation(fields: [policyId], references: [id])
   documents  Document[]
 }
 
