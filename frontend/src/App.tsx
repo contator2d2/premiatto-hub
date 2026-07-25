@@ -12,6 +12,7 @@ import SuperAdminPage from './pages/admin/super-admin';
 import AccessTemplatesPage from './pages/admin/access-templates';
 import ComingSoon from './pages/coming-soon';
 import AppShell from './components/app-shell';
+import { NotificationToaster } from './components/notification-toaster';
 import { MODULES } from './lib/modules';
 
 function Protected({
@@ -38,7 +39,12 @@ function Protected({
   if (moduleKey && !isSuperAdmin && user.allowedModules && !user.allowedModules.includes(moduleKey)) {
     return <Navigate to="/dashboard" replace />;
   }
-  return <AppShell>{children}</AppShell>;
+  return (
+    <>
+      <AppShell>{children}</AppShell>
+      <NotificationToaster />
+    </>
+  );
 }
 
 const COMING_SOON_BULLETS: Record<string, string[]> = {
