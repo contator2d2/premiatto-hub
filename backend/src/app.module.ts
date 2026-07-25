@@ -14,6 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AuditModule } from './audit/audit.module';
 import { AccessTemplatesModule } from './access-templates/access-templates.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { PoliciesModule } from './policies/policies.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -34,6 +35,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuditModule,
     AccessTemplatesModule,
     DashboardModule,
+    PoliciesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
