@@ -148,7 +148,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               to={n.to}
               icon={n.icon}
               label={n.label}
-              exact={undefined}
               dot={n.dot}
               badge={
                 n.badge ? (
