@@ -54,3 +54,24 @@ body {
 @utility shadow-elegant {
   box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--primary) 30%, transparent);
 }
+
+@utility input {
+  display: block;
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background: var(--background);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  background: transparent;
+}
