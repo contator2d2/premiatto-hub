@@ -46,6 +46,35 @@ model User {
   favorites   DocumentFavorite[]
   acknowledgements DocumentAcknowledgement[]
   refreshTokens RefreshToken[]
+  accessOverride UserAccessOverride?
+}
+
+model AccessTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  moduleKeys  String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  roleDefaults  RoleAccessTemplate[]
+  userOverrides UserAccessOverride[]
+}
+
+model RoleAccessTemplate {
+  role       AppRole @id
+  templateId String
+  template   AccessTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+}
+
+model UserAccessOverride {
+  userId     String   @id
+  templateId String?
+  moduleKeys String[] @default([])
+  updatedAt  DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template AccessTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 }
 
 model UserRole {
