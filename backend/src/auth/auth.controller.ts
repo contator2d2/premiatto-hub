@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto } from './dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
@@ -21,13 +21,8 @@ function setRefreshCookie(res: Response, token: string, ttlMs: number) {
 export class AuthController {
   constructor(private auth: AuthService) {}
 
-  @Public()
-  @Post('register')
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
-    const t = await this.auth.register(dto);
-    setRefreshCookie(res, t.refreshToken, t.refreshTtlMs);
-    return { accessToken: t.accessToken };
-  }
+  // Registro público desabilitado. Novos usuários são criados via /users por admins.
+
 
   @Public()
   @Post('login')

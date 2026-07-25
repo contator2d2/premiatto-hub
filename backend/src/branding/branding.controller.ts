@@ -17,16 +17,17 @@ export class BrandingController {
   }
 
   @Put()
-  @Roles(AppRole.super_admin, AppRole.admin)
+  @Roles(AppRole.super_admin)
   update(@Body() body: any, @CurrentUser('id') userId: string) {
     return this.branding.update(body, userId);
   }
 
   @Post('upload')
-  @Roles(AppRole.super_admin, AppRole.admin)
+  @Roles(AppRole.super_admin)
   @UseInterceptors(FileInterceptor('file'))
   upload(@UploadedFile() file: Express.Multer.File) {
     if (!file) return { error: 'Sem arquivo' };
     return { url: `/api/files/branding/${file.filename}` };
   }
 }
+

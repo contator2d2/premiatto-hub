@@ -16,12 +16,12 @@ type AuthCtx = {
   user: CurrentUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   isAdmin: boolean;
   isSuperAdmin: boolean;
 };
+
 
 const Ctx = createContext<AuthCtx | null>(null);
 
@@ -59,12 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await loadMe();
   }, [loadMe]);
 
-  const register = useCallback(async (email: string, password: string, fullName?: string) => {
-    const { data } = await api.post('/auth/register', { email, password, fullName });
-    setAccessToken(data.accessToken);
-    await loadMe();
-  }, [loadMe]);
-
   const logout = useCallback(async () => {
     try { await api.post('/auth/logout'); } catch {}
     setAccessToken(null);
@@ -75,11 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = !!user?.roles?.includes('super_admin');
 
   return (
-    <Ctx.Provider value={{ user, loading, login, register, logout, refresh: loadMe, isAdmin, isSuperAdmin }}>
+    <Ctx.Provider value={{ user, loading, login, logout, refresh: loadMe, isAdmin, isSuperAdmin }}>
       {children}
     </Ctx.Provider>
   );
 }
+
 
 export function useAuth() {
   const c = useContext(Ctx);
