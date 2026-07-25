@@ -1,39 +1,28 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { ReactNode, useState } from 'react';
 import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  ShieldCheck,
-  Palette,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
   Building2,
   Search,
   Bell,
+  Lock,
+  ShieldCheck,
+  Palette,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { useBranding } from '@/contexts/branding-context';
 import { cn } from '@/lib/utils';
+import { MODULES, GROUP_LABELS, type ModuleGroup } from '@/lib/modules';
+
+const GROUP_ORDER: ModuleGroup[] = ['workspace', 'conhecimento', 'operacao', 'inteligencia'];
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { branding } = useBranding();
   const [open, setOpen] = useState(true);
   const navigate = useNavigate();
-
-  const nav = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/documents', label: 'Documentos', icon: FileText },
-    ...(isAdmin
-      ? [
-          { to: '/users', label: 'Usuários', icon: Users },
-          { to: '/audit', label: 'Auditoria', icon: ShieldCheck },
-        ]
-      : []),
-    ...(isSuperAdmin ? [{ to: '/admin/branding', label: 'Marca', icon: Palette }] : []),
-  ];
 
   const appName = branding?.appName || 'Premiatto Connect';
   const initials = (user?.fullName || user?.email || '?')
@@ -48,7 +37,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <aside
         className={cn(
           'relative flex flex-col border-r border-border bg-card transition-all duration-200',
-          open ? 'w-64' : 'w-[4.5rem]',
+          open ? 'w-72' : 'w-[4.5rem]',
         )}
       >
         <div className="h-16 px-3 flex items-center gap-3 border-b border-border">
@@ -62,34 +51,134 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {open && (
             <div className="flex flex-col leading-tight min-w-0">
               <span className="font-display font-semibold text-sm truncate">{appName}</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Workspace</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Plataforma Corporativa
+              </span>
             </div>
           )}
         </div>
 
-        <nav className="flex-1 p-2.5 space-y-0.5 overflow-y-auto">
-          {open && (
-            <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Menu
+        <nav className="flex-1 p-2.5 space-y-4 overflow-y-auto">
+          {GROUP_ORDER.map((group) => {
+            const items = MODULES.filter((m) => m.group === group);
+            if (items.length === 0) return null;
+            return (
+              <div key={group} className="space-y-0.5">
+                {open && (
+                  <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {GROUP_LABELS[group]}
+                  </div>
+                )}
+                {items.map((m) => {
+                  const locked = m.status === 'coming_soon';
+                  return (
+                    <NavLink
+                      key={m.key}
+                      to={m.to}
+                      className={({ isActive }) =>
+                        cn(
+                          'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                          isActive
+                            ? 'bg-primary/10 text-primary font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_20%,transparent)]'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                          locked && 'opacity-70',
+                        )
+                      }
+                      title={locked ? `${m.label} — Em breve` : m.label}
+                    >
+                      <m.icon className="h-4 w-4 shrink-0" />
+                      {open && (
+                        <>
+                          <span className="truncate flex-1">{m.label}</span>
+                          {locked && (
+                            <span className="ml-auto inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              <Lock className="h-2.5 w-2.5" />
+                              Em breve
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            );
+          })}
+
+          {(isAdmin || isSuperAdmin) && (
+            <div className="space-y-0.5 pt-2 border-t border-border">
+              {open && (
+                <div className="px-2 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Administração
+                </div>
+              )}
+              {isAdmin && (
+                <>
+                  <NavLink
+                    to="/users"
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    {open && <span>Usuários</span>}
+                  </NavLink>
+                  <NavLink
+                    to="/audit"
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    {open && <span>Auditoria</span>}
+                  </NavLink>
+                </>
+              )}
+              {isSuperAdmin && (
+                <>
+                  <NavLink
+                    to="/admin"
+                    end
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0" />
+                    {open && <span>Super Admin</span>}
+                  </NavLink>
+                  <NavLink
+                    to="/admin/branding"
+                    className={({ isActive }) =>
+                      cn(
+                        'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                        isActive
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <Palette className="h-4 w-4 shrink-0" />
+                    {open && <span>Identidade Visual</span>}
+                  </NavLink>
+                </>
+              )}
             </div>
           )}
-          {nav.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) =>
-                cn(
-                  'group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
-                  isActive
-                    ? 'bg-primary/10 text-primary font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_20%,transparent)]'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                )
-              }
-            >
-              <n.icon className="h-4 w-4 shrink-0" />
-              {open && <span className="truncate">{n.label}</span>}
-            </NavLink>
-          ))}
         </nav>
 
         <div className="p-2.5 border-t border-border space-y-1">
@@ -126,7 +215,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
-              placeholder="Buscar documentos, pessoas…"
+              placeholder="Buscar em toda a plataforma…"
               className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
