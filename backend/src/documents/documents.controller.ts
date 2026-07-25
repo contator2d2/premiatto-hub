@@ -3,47 +3,54 @@ import {
   Controller,
   Delete,
   Get,
+  Ip,
   Param,
   Post,
+  Put,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { AppRole, SharePriority } from '@prisma/client';
 import { DocumentsService } from './documents.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 
-@Controller('documents')
+@Controller()
 export class DocumentsController {
   constructor(private docs: DocumentsService) {}
 
-  @Get()
-  list(@Query('search') search?: string, @Query('folderId') folderId?: string, @Query('official') official?: string) {
-    return this.docs.list({
+  // ==== Auth: /documents ====
+
+  @Get('documents')
+  list(
+    @CurrentUser('id') userId: string,
+    @Query('search') search?: string,
+    @Query('folderId') folderId?: string,
+    @Query('official') official?: string,
+    @Query('scope') scope?: any,
+  ) {
+    return this.docs.list(userId, {
       search,
-      folderId,
+      folderId: folderId === 'root' ? null : folderId,
       official: official === undefined ? undefined : official === 'true',
+      scope,
     });
   }
 
-  @Get(':id')
-  get(@Param('id') id: string) {
-    return this.docs.get(id);
+  @Get('documents/:id')
+  get(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.docs.get(userId, id);
   }
 
-  @Post('upload')
+  @Post('documents/upload')
   @UseInterceptors(FileInterceptor('file'))
   async upload(
     @CurrentUser('id') userId: string,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: {
-      name?: string;
-      description?: string;
-      isOfficial?: string;
-      requiresAcknowledgement?: string;
-      categoryId?: string;
-      folderId?: string;
-    },
+    @Body() body: any,
   ) {
     if (!file) return { error: 'Sem arquivo' };
     const ext = file.originalname.split('.').pop();
@@ -54,30 +61,178 @@ export class DocumentsController {
       fileType: ext,
       fileSize: file.size,
       mimeType: file.mimetype,
-      isOfficial: body.isOfficial === 'true',
-      requiresAcknowledgement: body.requiresAcknowledgement === 'true',
-      categoryId: body.categoryId || undefined,
       folderId: body.folderId || undefined,
+      categoryId: body.categoryId || undefined,
+      responsibleId: body.responsibleId || undefined,
+      author: body.author,
+      tags: body.tags ? (Array.isArray(body.tags) ? body.tags : String(body.tags).split(',').map((s: string) => s.trim()).filter(Boolean)) : undefined,
+      confidentiality: body.confidentiality,
+      isOfficial: body.isOfficial === 'true' || body.isOfficial === true,
+      requiresAcknowledgement: body.requiresAcknowledgement === 'true' || body.requiresAcknowledgement === true,
+      allowDownload: body.allowDownload !== 'false' && body.allowDownload !== false,
+      allowShare: body.allowShare !== 'false' && body.allowShare !== false,
+      validUntil: body.validUntil || null,
+      publishedAt: body.publishedAt || null,
     });
   }
 
-  @Post(':id/download')
+  @Post('documents/:id/version')
+  @UseInterceptors(FileInterceptor('file'))
+  async addVersion(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
+    if (!file) return { error: 'Sem arquivo' };
+    const ext = file.originalname.split('.').pop();
+    return this.docs.addVersion(userId, id, {
+      filePath: `/api/files/documents/${file.filename}`,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      fileType: ext,
+      changeReason: body.changeReason,
+      notes: body.notes,
+    });
+  }
+
+  @Get('documents/:id/versions')
+  versions(@Param('id') id: string) {
+    return this.docs.listVersions(id);
+  }
+
+  @Post('documents/:id/versions/:v/restore')
+  restoreVersion(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Param('v') v: string,
+    @Body() body: { reason?: string },
+  ) {
+    return this.docs.restoreVersion(userId, id, parseInt(v, 10), body?.reason);
+  }
+
+  @Put('documents/:id')
+  update(@CurrentUser('id') userId: string, @Param('id') id: string, @Body() body: any) {
+    return this.docs.updateMeta(userId, id, body);
+  }
+
+  @Post('documents/:id/view')
+  view(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.docs.recordView(userId, id);
+  }
+
+  @Post('documents/:id/download')
   download(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.docs.recordDownload(userId, id).then(() => ({ ok: true }));
+    return this.docs.recordDownload(userId, id);
   }
 
-  @Post(':id/acknowledge')
-  ack(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.docs.acknowledge(userId, id).then(() => ({ ok: true }));
+  @Post('documents/:id/acknowledge')
+  ack(@CurrentUser('id') userId: string, @Param('id') id: string, @Ip() ip: string, @Req() req: any) {
+    return this.docs.acknowledge(userId, id, ip, req.headers['user-agent']);
   }
 
-  @Post(':id/favorite')
+  @Post('documents/:id/favorite')
   fav(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.docs.toggleFavorite(userId, id);
   }
 
-  @Delete(':id')
+  @Delete('documents/:id')
   remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    return this.docs.remove(userId, id);
+    return this.docs.softDelete(userId, id);
+  }
+
+  @Post('documents/:id/restore')
+  restore(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.docs.restore(userId, id);
+  }
+
+  @Get('documents/:id/timeline')
+  timeline(@Param('id') id: string) {
+    return this.docs.timeline(id);
+  }
+
+  // ---- Shares ----
+
+  @Get('documents/:id/shares')
+  listShares(@Param('id') id: string) {
+    return this.docs.listShares(id);
+  }
+
+  @Post('documents/:id/shares')
+  createShare(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() body: {
+      targetUserIds?: string[];
+      targetDepartmentIds?: string[];
+      targetRoles?: AppRole[];
+      scopeAll?: boolean;
+      message?: string;
+      priority?: SharePriority;
+      requireAck?: boolean;
+      allowDownload?: boolean;
+      allowReshare?: boolean;
+      dueAt?: string | null;
+    },
+  ) {
+    return this.docs.createShare(userId, id, body);
+  }
+
+  @Post('documents/:id/shares/mark-viewed')
+  markShareViewed(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.docs.markShareViewed(userId, id);
+  }
+
+  @Delete('shares/:shareId')
+  revokeShare(@CurrentUser('id') userId: string, @Param('shareId') shareId: string) {
+    return this.docs.revokeShare(userId, shareId);
+  }
+
+  // ---- Public links ----
+
+  @Get('public-links')
+  listPublicLinks(@CurrentUser('id') userId: string, @Query('documentId') documentId?: string) {
+    return this.docs.listPublicLinks(documentId, undefined);
+  }
+
+  @Post('documents/:id/public-links')
+  createPublicLink(@CurrentUser('id') userId: string, @Param('id') id: string, @Body() body: any) {
+    return this.docs.createPublicLink(userId, id, body);
+  }
+
+  @Put('public-links/:linkId')
+  updatePublicLink(@CurrentUser('id') userId: string, @Param('linkId') linkId: string, @Body() body: any) {
+    return this.docs.updatePublicLink(userId, linkId, body);
+  }
+
+  @Delete('public-links/:linkId')
+  revokePublicLink(@CurrentUser('id') userId: string, @Param('linkId') linkId: string) {
+    return this.docs.revokePublicLink(userId, linkId);
+  }
+
+  // ==== Public (no auth) ====
+
+  @Public()
+  @Get('p/:token')
+  publicInfo(@Param('token') token: string) {
+    return this.docs.publicLinkInfo(token);
+  }
+
+  @Public()
+  @Post('p/:token/open')
+  publicOpen(@Param('token') token: string, @Body() body: { password?: string; name?: string; email?: string }, @Ip() ip: string, @Req() req: any) {
+    return this.docs.publicLinkOpen(token, { ...body, ip, userAgent: req.headers['user-agent'] });
+  }
+
+  @Public()
+  @Post('p/:token/download')
+  publicDownload(@Param('token') token: string, @Body() body: { name?: string }, @Ip() ip: string, @Req() req: any) {
+    return this.docs.publicLinkDownload(token, { ...body, ip, userAgent: req.headers['user-agent'] });
+  }
+
+  @Public()
+  @Post('p/:token/acknowledge')
+  publicAck(@Param('token') token: string, @Body() body: { name?: string; email?: string }, @Ip() ip: string, @Req() req: any) {
+    return this.docs.publicLinkAck(token, { ...body, ip, userAgent: req.headers['user-agent'] });
   }
 }
