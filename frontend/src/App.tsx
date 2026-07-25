@@ -95,6 +95,7 @@ export default function App() {
       <Route path="/admin" element={<Protected superAdminOnly><SuperAdminPage /></Protected>} />
       <Route path="/admin/branding" element={<Protected superAdminOnly><BrandingAdmin /></Protected>} />
       <Route path="/admin/access-templates" element={<Protected superAdminOnly><AccessTemplatesPage /></Protected>} />
+      <Route path="/admin/policies" element={<Protected adminOnly><PoliciesPage /></Protected>} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
