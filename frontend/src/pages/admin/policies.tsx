@@ -110,7 +110,7 @@ export default function PoliciesPage() {
   });
 
   const selected = useMemo(
-    () => policies.data?.find((p) => p.id === selectedId) ?? null,
+    () => policies.data?.find((p: Policy) => p.id === selectedId) ?? null,
     [policies.data, selectedId],
   );
 
@@ -233,7 +233,7 @@ export default function PoliciesPage() {
         <div className="grid lg:grid-cols-[380px,1fr] gap-6">
           <aside className="space-y-2">
             {policies.isLoading && <div className="text-sm text-muted-foreground">Carregando…</div>}
-            {policies.data?.map((p) => (
+            {policies.data?.map((p: Policy) => (
               <button
                 key={p.id}
                 onClick={() => startEdit(p)}
@@ -465,7 +465,7 @@ function PresetsTab() {
   });
   return (
     <div className="grid md:grid-cols-2 gap-4">
-      {data?.map((p) => (
+      {data?.map((p: Preset) => (
         <div key={p.id} className="rounded-lg border border-border p-4 bg-card">
           <div className="flex items-start justify-between gap-2">
             <div>
@@ -515,7 +515,7 @@ function ExceptionsTab() {
           </tr>
         </thead>
         <tbody>
-          {data.map((e) => (
+          {data.map((e: Exception) => (
             <tr key={e.id} className="border-t border-border">
               <td className="px-3 py-2">{e.policy?.name}</td>
               <td className="px-3 py-2">{e.requestedAction}</td>
