@@ -24,21 +24,35 @@ import { cn } from '@/lib/utils';
 
 type Scope = 'all' | 'shared-with-me' | 'shared-by-me' | 'official' | 'pending-ack' | 'favorites' | 'recent' | 'trash';
 
-const SCOPES: { key: Scope; label: string; icon: any }[] = [
-  { key: 'all', label: 'Todos os arquivos', icon: Home },
-  { key: 'shared-with-me', label: 'Compartilhados comigo', icon: Users2 },
-  { key: 'shared-by-me', label: 'Compartilhados por mim', icon: Share2 },
-  { key: 'official', label: 'Documentos oficiais', icon: BadgeCheck },
-  { key: 'pending-ack', label: 'Pendentes de leitura', icon: Bell },
-  { key: 'favorites', label: 'Favoritos', icon: Star },
-  { key: 'recent', label: 'Recentes', icon: Clock },
-  { key: 'trash', label: 'Lixeira', icon: Trash2 },
-];
+const FILTER_TO_SCOPE: Record<string, Scope> = {
+  all: 'all',
+  officials: 'official',
+  official: 'official',
+  'shared-with-me': 'shared-with-me',
+  'shared-by-me': 'shared-by-me',
+  pending: 'pending-ack',
+  'pending-ack': 'pending-ack',
+  favorites: 'favorites',
+  recent: 'recent',
+  trash: 'trash',
+};
+
+const SCOPE_LABELS: Record<Scope, string> = {
+  all: 'Todos os arquivos',
+  'shared-with-me': 'Compartilhados comigo',
+  'shared-by-me': 'Compartilhados por mim',
+  official: 'Documentos oficiais',
+  'pending-ack': 'Pendentes de leitura',
+  favorites: 'Favoritos',
+  recent: 'Recentes',
+  trash: 'Lixeira',
+};
 
 export default function DocumentsPage() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
-  const [scope, setScope] = useState<Scope>('all');
+  const filterParam = params.get('filter') || 'all';
+  const scope: Scope = FILTER_TO_SCOPE[filterParam] || 'all';
   const [folderId, setFolderId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(params.get('doc'));
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -55,10 +69,17 @@ export default function DocumentsPage() {
   const uploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selectedId) setParams({ doc: selectedId }, { replace: true });
-    else if (params.get('doc')) setParams({}, { replace: true });
+    const next = new URLSearchParams(params);
+    if (selectedId) next.set('doc', selectedId);
+    else next.delete('doc');
+    if (next.toString() !== params.toString()) setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+
+  // Reset folder navigation when filter changes
+  useEffect(() => {
+    setFolderId(null);
+  }, [filterParam]);
 
   const { data: folders } = useQuery({
     queryKey: ['folders', folderId],
