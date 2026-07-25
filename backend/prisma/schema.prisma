@@ -415,3 +415,73 @@ model Branding {
   updatedAt     DateTime @updatedAt
   updatedBy     String?
 }
+
+model DocumentPolicy {
+  id              String       @id @default(uuid())
+  name            String       @unique
+  description     String?
+  category        String?
+  status          PolicyStatus @default(draft)
+  priority        Int          @default(100)
+  responsibleId   String?
+  effectiveFrom   DateTime?
+  effectiveUntil  DateTime?
+  conditions      Json         @default("{}")
+  permissions     Json         @default("{}")
+  sharingRules    Json         @default("{}")
+  securityRules   Json         @default("{}")
+  readingRules    Json         @default("{}")
+  versioningRules Json         @default("{}")
+  retentionRules  Json         @default("{}")
+  isSystem        Boolean      @default(false)
+  createdBy       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  folders    Folder[]
+  documents  Document[]
+  exceptions PolicyException[]
+  audits     PolicyAudit[]
+}
+
+model SharePreset {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  config      Json     @default("{}")
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PolicyException {
+  id              String                @id @default(uuid())
+  policyId        String
+  documentId      String?
+  requestedBy     String
+  reason          String
+  requestedAction String
+  expiresAt       DateTime?
+  status          PolicyExceptionStatus @default(pending)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  policy DocumentPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}
+
+model PolicyAudit {
+  id        String   @id @default(uuid())
+  policyId  String?
+  action    String
+  userId    String?
+  before    Json?
+  after     Json?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  policy DocumentPolicy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+}
