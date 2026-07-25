@@ -24,21 +24,35 @@ import { cn } from '@/lib/utils';
 
 type Scope = 'all' | 'shared-with-me' | 'shared-by-me' | 'official' | 'pending-ack' | 'favorites' | 'recent' | 'trash';
 
-const SCOPES: { key: Scope; label: string; icon: any }[] = [
-  { key: 'all', label: 'Todos os arquivos', icon: Home },
-  { key: 'shared-with-me', label: 'Compartilhados comigo', icon: Users2 },
-  { key: 'shared-by-me', label: 'Compartilhados por mim', icon: Share2 },
-  { key: 'official', label: 'Documentos oficiais', icon: BadgeCheck },
-  { key: 'pending-ack', label: 'Pendentes de leitura', icon: Bell },
-  { key: 'favorites', label: 'Favoritos', icon: Star },
-  { key: 'recent', label: 'Recentes', icon: Clock },
-  { key: 'trash', label: 'Lixeira', icon: Trash2 },
-];
+const FILTER_TO_SCOPE: Record<string, Scope> = {
+  all: 'all',
+  officials: 'official',
+  official: 'official',
+  'shared-with-me': 'shared-with-me',
+  'shared-by-me': 'shared-by-me',
+  pending: 'pending-ack',
+  'pending-ack': 'pending-ack',
+  favorites: 'favorites',
+  recent: 'recent',
+  trash: 'trash',
+};
+
+const SCOPE_LABELS: Record<Scope, string> = {
+  all: 'Todos os arquivos',
+  'shared-with-me': 'Compartilhados comigo',
+  'shared-by-me': 'Compartilhados por mim',
+  official: 'Documentos oficiais',
+  'pending-ack': 'Pendentes de leitura',
+  favorites: 'Favoritos',
+  recent: 'Recentes',
+  trash: 'Lixeira',
+};
 
 export default function DocumentsPage() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
-  const [scope, setScope] = useState<Scope>('all');
+  const filterParam = params.get('filter') || 'all';
+  const scope: Scope = FILTER_TO_SCOPE[filterParam] || 'all';
   const [folderId, setFolderId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(params.get('doc'));
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -55,10 +69,17 @@ export default function DocumentsPage() {
   const uploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (selectedId) setParams({ doc: selectedId }, { replace: true });
-    else if (params.get('doc')) setParams({}, { replace: true });
+    const next = new URLSearchParams(params);
+    if (selectedId) next.set('doc', selectedId);
+    else next.delete('doc');
+    if (next.toString() !== params.toString()) setParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+
+  // Reset folder navigation when filter changes
+  useEffect(() => {
+    setFolderId(null);
+  }, [filterParam]);
 
   const { data: folders } = useQuery({
     queryKey: ['folders', folderId],
@@ -136,30 +157,9 @@ export default function DocumentsPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Sub-sidebar of scopes */}
-      <aside className="w-60 border-r border-border bg-card p-3 space-y-1 shrink-0">
-        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Central de Arquivos
-        </div>
-        {SCOPES.map((s) => (
-          <button
-            key={s.key}
-            onClick={() => {
-              setScope(s.key);
-              setFolderId(null);
-            }}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              scope === s.key && !folderId
-                ? 'bg-primary/10 text-primary font-medium'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            <s.icon className="h-4 w-4" />
-            {s.label}
-          </button>
-        ))}
-        <div className="px-2 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+      {/* Compact folders sub-sidebar */}
+      <aside className="w-56 border-r border-border bg-card p-3 space-y-1 shrink-0 hidden lg:block">
+        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
           Pastas
           <button
             onClick={() => setShowNewFolder(true)}
@@ -169,13 +169,20 @@ export default function DocumentsPage() {
             <FolderPlus className="h-3.5 w-3.5" />
           </button>
         </div>
+        <button
+          onClick={() => setFolderId(null)}
+          className={cn(
+            'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+            !folderId ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          )}
+        >
+          <Home className="h-4 w-4" />
+          Raiz
+        </button>
         {(folders ?? []).map((f: any) => (
           <button
             key={f.id}
-            onClick={() => {
-              setScope('all');
-              setFolderId(f.id);
-            }}
+            onClick={() => setFolderId(f.id)}
             className={cn(
               'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
               folderId === f.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
@@ -186,13 +193,16 @@ export default function DocumentsPage() {
             <span className="text-[10px] text-muted-foreground">{f._count?.documents ?? 0}</span>
           </button>
         ))}
+        {(folders ?? []).length === 0 && (
+          <div className="px-2.5 py-3 text-[11px] text-muted-foreground">Nenhuma pasta ainda.</div>
+        )}
       </aside>
 
       <div className="flex-1 min-w-0 p-6 lg:p-8 space-y-5">
         <header className="flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-semibold tracking-tight font-display">
-              {folderId && currentFolder ? currentFolder.name : SCOPES.find((s) => s.key === scope)?.label}
+              {folderId && currentFolder ? currentFolder.name : SCOPE_LABELS[scope]}
             </h1>
             {folderId && currentFolder?.breadcrumb && (
               <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
