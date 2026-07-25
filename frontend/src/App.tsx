@@ -10,6 +10,7 @@ import AuditPage from './pages/audit';
 import BrandingAdmin from './pages/admin/branding';
 import SuperAdminPage from './pages/admin/super-admin';
 import AccessTemplatesPage from './pages/admin/access-templates';
+import PoliciesPage from './pages/admin/policies';
 import ComingSoon from './pages/coming-soon';
 import AppShell from './components/app-shell';
 import { NotificationToaster } from './components/notification-toaster';
