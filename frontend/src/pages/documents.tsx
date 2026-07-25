@@ -1,19 +1,85 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { toast } from 'sonner';
-import { Upload, FileText, Trash2, Download } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Upload,
+  FileText,
+  FolderPlus,
+  Folder,
+  Home,
+  Star,
+  Clock,
+  Trash2,
+  BadgeCheck,
+  Share2,
+  Users2,
+  Link2,
+  Bell,
+  ChevronRight,
+} from 'lucide-react';
 import { api } from '@/lib/api';
+import { DocumentPanel } from '@/components/document-panel';
+import { cn } from '@/lib/utils';
+
+type Scope = 'all' | 'shared-with-me' | 'shared-by-me' | 'official' | 'pending-ack' | 'favorites' | 'recent' | 'trash';
+
+const SCOPES: { key: Scope; label: string; icon: any }[] = [
+  { key: 'all', label: 'Todos os arquivos', icon: Home },
+  { key: 'shared-with-me', label: 'Compartilhados comigo', icon: Users2 },
+  { key: 'shared-by-me', label: 'Compartilhados por mim', icon: Share2 },
+  { key: 'official', label: 'Documentos oficiais', icon: BadgeCheck },
+  { key: 'pending-ack', label: 'Pendentes de leitura', icon: Bell },
+  { key: 'favorites', label: 'Favoritos', icon: Star },
+  { key: 'recent', label: 'Recentes', icon: Clock },
+  { key: 'trash', label: 'Lixeira', icon: Trash2 },
+];
 
 export default function DocumentsPage() {
   const qc = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [isOfficial, setIsOfficial] = useState(false);
-  const [requiresAck, setRequiresAck] = useState(false);
-  const [description, setDescription] = useState('');
+  const [params, setParams] = useSearchParams();
+  const [scope, setScope] = useState<Scope>('all');
+  const [folderId, setFolderId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(params.get('doc'));
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [search, setSearch] = useState('');
+  const [showUploadMeta, setShowUploadMeta] = useState(false);
+  const [uploadMeta, setUploadMeta] = useState({
+    isOfficial: false,
+    requiresAcknowledgement: false,
+    confidentiality: 'internal',
+    description: '',
+    tags: '',
+  });
+  const uploadRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectedId) setParams({ doc: selectedId }, { replace: true });
+    else if (params.get('doc')) setParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  const { data: folders } = useQuery({
+    queryKey: ['folders', folderId],
+    queryFn: async () => (await api.get(`/folders?parentId=${folderId ?? ''}`)).data as any[],
+  });
+  const { data: currentFolder } = useQuery({
+    queryKey: ['folder', folderId],
+    queryFn: async () => (folderId ? (await api.get(`/folders/${folderId}`)).data : null),
+    enabled: !!folderId,
+  });
 
   const { data: docs, isLoading } = useQuery({
-    queryKey: ['docs'],
-    queryFn: async () => (await api.get('/documents')).data,
+    queryKey: ['docs', scope, folderId, search],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.set('scope', scope);
+      if (folderId) params.set('folderId', folderId);
+      if (search) params.set('search', search);
+      return (await api.get(`/documents?${params.toString()}`)).data as any[];
+    },
   });
 
   const upload = useMutation({
@@ -21,100 +87,291 @@ export default function DocumentsPage() {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('name', file.name);
-      fd.append('description', description);
-      fd.append('isOfficial', String(isOfficial));
-      fd.append('requiresAcknowledgement', String(requiresAck));
+      fd.append('description', uploadMeta.description);
+      fd.append('isOfficial', String(uploadMeta.isOfficial));
+      fd.append('requiresAcknowledgement', String(uploadMeta.requiresAcknowledgement));
+      fd.append('confidentiality', uploadMeta.confidentiality);
+      if (uploadMeta.tags) fd.append('tags', uploadMeta.tags);
+      if (folderId) fd.append('folderId', folderId);
       return (await api.post('/documents/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
     },
     onSuccess: () => {
       toast.success('Documento enviado');
-      setDescription(''); setIsOfficial(false); setRequiresAck(false);
+      setShowUploadMeta(false);
+      setUploadMeta({ isOfficial: false, requiresAcknowledgement: false, confidentiality: 'internal', description: '', tags: '' });
       qc.invalidateQueries({ queryKey: ['docs'] });
     },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Falha no upload'),
   });
 
-  const del = useMutation({
-    mutationFn: async (id: string) => (await api.delete(`/documents/${id}`)).data,
-    onSuccess: () => { toast.success('Removido'); qc.invalidateQueries({ queryKey: ['docs'] }); },
+  const createFolder = useMutation({
+    mutationFn: async () => (await api.post('/folders', { name: newFolderName, parentId: folderId || undefined })).data,
+    onSuccess: () => {
+      toast.success('Pasta criada');
+      setShowNewFolder(false);
+      setNewFolderName('');
+      qc.invalidateQueries({ queryKey: ['folders'] });
+    },
   });
 
-  async function handleDownload(d: any) {
-    await api.post(`/documents/${d.id}/download`);
-    window.open(d.filePath, '_blank');
-  }
+  const del = useMutation({
+    mutationFn: async (id: string) => (await api.delete(`/documents/${id}`)).data,
+    onSuccess: () => {
+      toast.success('Movido para lixeira');
+      qc.invalidateQueries({ queryKey: ['docs'] });
+    },
+  });
+
+  const restore = useMutation({
+    mutationFn: async (id: string) => (await api.post(`/documents/${id}/restore`)).data,
+    onSuccess: () => {
+      toast.success('Restaurado');
+      qc.invalidateQueries({ queryKey: ['docs'] });
+    },
+  });
+
+  const fav = useMutation({
+    mutationFn: async (id: string) => (await api.post(`/documents/${id}/favorite`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['docs'] }),
+  });
 
   return (
-    <div className="max-w-7xl mx-auto p-6 lg:p-10 space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight font-display">Documentos</h1>
-        <p className="text-sm text-muted-foreground mt-1">Central inteligente de documentos.</p>
-      </header>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div className="grid sm:grid-cols-2 gap-3">
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descrição (opcional)"
-            className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
-          />
-          <div className="flex items-center gap-4 text-sm">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={isOfficial} onChange={(e) => setIsOfficial(e.target.checked)} />
-              Oficial
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={requiresAck} onChange={(e) => setRequiresAck(e.target.checked)} />
-              Exigir ciência
-            </label>
-          </div>
+    <div className="flex min-h-[calc(100vh-4rem)]">
+      {/* Sub-sidebar of scopes */}
+      <aside className="w-60 border-r border-border bg-card p-3 space-y-1 shrink-0">
+        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Central de Arquivos
         </div>
-        <label className="flex items-center justify-center gap-3 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer text-sm text-muted-foreground">
-          <Upload className="h-5 w-5" />
-          <span>Selecionar arquivo para upload</span>
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload.mutate(f);
-              if (fileRef.current) fileRef.current.value = '';
+        {SCOPES.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => {
+              setScope(s.key);
+              setFolderId(null);
             }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+              scope === s.key && !folderId
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            <s.icon className="h-4 w-4" />
+            {s.label}
+          </button>
+        ))}
+        <div className="px-2 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+          Pastas
+          <button
+            onClick={() => setShowNewFolder(true)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground"
+            title="Nova pasta"
+          >
+            <FolderPlus className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {(folders ?? []).map((f: any) => (
+          <button
+            key={f.id}
+            onClick={() => {
+              setScope('all');
+              setFolderId(f.id);
+            }}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+              folderId === f.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+            )}
+          >
+            <Folder className="h-4 w-4" />
+            <span className="truncate flex-1">{f.name}</span>
+            <span className="text-[10px] text-muted-foreground">{f._count?.documents ?? 0}</span>
+          </button>
+        ))}
+      </aside>
+
+      <div className="flex-1 min-w-0 p-6 lg:p-8 space-y-5">
+        <header className="flex items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight font-display">
+              {folderId && currentFolder ? currentFolder.name : SCOPES.find((s) => s.key === scope)?.label}
+            </h1>
+            {folderId && currentFolder?.breadcrumb && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <button onClick={() => setFolderId(null)} className="hover:underline">Todos</button>
+                {currentFolder.breadcrumb.map((b: any, i: number) => (
+                  <span key={b.id} className="flex items-center gap-1">
+                    <ChevronRight className="h-3 w-3" />
+                    <button
+                      onClick={() => setFolderId(b.id)}
+                      className={i === currentFolder.breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:underline'}
+                    >
+                      {b.name}
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar arquivos…"
+            className="h-10 px-3 rounded-lg border border-input bg-background text-sm w-72"
           />
-        </label>
+          <button
+            onClick={() => setShowUploadMeta(true)}
+            className="h-10 px-4 rounded-lg gradient-brand text-primary-foreground text-sm font-medium inline-flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" /> Enviar arquivo
+          </button>
+        </header>
+
+        {showNewFolder && (
+          <div className="rounded-xl border border-border bg-card p-4 flex gap-2">
+            <input
+              autoFocus
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Nome da nova pasta"
+              className="flex-1 h-10 px-3 rounded-lg border border-input bg-background text-sm"
+            />
+            <button
+              onClick={() => createFolder.mutate()}
+              disabled={!newFolderName.trim()}
+              className="h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm disabled:opacity-50"
+            >
+              Criar
+            </button>
+            <button onClick={() => setShowNewFolder(false)} className="h-10 px-4 rounded-lg border border-border text-sm">
+              Cancelar
+            </button>
+          </div>
+        )}
+
+        {showUploadMeta && (
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="text-sm font-semibold">Metadados do upload</div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <input
+                placeholder="Descrição"
+                value={uploadMeta.description}
+                onChange={(e) => setUploadMeta({ ...uploadMeta, description: e.target.value })}
+                className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
+              />
+              <input
+                placeholder="Tags (separadas por vírgula)"
+                value={uploadMeta.tags}
+                onChange={(e) => setUploadMeta({ ...uploadMeta, tags: e.target.value })}
+                className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
+              />
+              <select
+                value={uploadMeta.confidentiality}
+                onChange={(e) => setUploadMeta({ ...uploadMeta, confidentiality: e.target.value })}
+                className="h-10 px-3 rounded-lg border border-input bg-background text-sm"
+              >
+                <option value="public">Público</option>
+                <option value="internal">Interno</option>
+                <option value="confidential">Confidencial</option>
+                <option value="restricted">Restrito</option>
+              </select>
+              <div className="flex items-center gap-4 text-sm">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={uploadMeta.isOfficial} onChange={(e) => setUploadMeta({ ...uploadMeta, isOfficial: e.target.checked })} />
+                  Oficial
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={uploadMeta.requiresAcknowledgement} onChange={(e) => setUploadMeta({ ...uploadMeta, requiresAcknowledgement: e.target.checked })} />
+                  Exigir ciência
+                </label>
+              </div>
+            </div>
+            <label className="flex items-center justify-center gap-3 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer text-sm text-muted-foreground">
+              <Upload className="h-5 w-5" />
+              <span>Selecionar arquivo para upload</span>
+              <input
+                ref={uploadRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) upload.mutate(f);
+                  if (uploadRef.current) uploadRef.current.value = '';
+                }}
+              />
+            </label>
+            <div className="flex justify-end">
+              <button onClick={() => setShowUploadMeta(false)} className="text-xs text-muted-foreground hover:underline">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-border bg-card overflow-hidden">
+          {isLoading ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">Carregando…</div>
+          ) : (docs ?? []).length === 0 ? (
+            <div className="p-16 text-center">
+              <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="text-sm mt-3 text-muted-foreground">Nenhum documento nesta visualização.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {docs!.map((d: any) => (
+                <li
+                  key={d.id}
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-muted/30 cursor-pointer"
+                  onClick={() => setSelectedId(d.id)}
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate flex items-center gap-2">
+                      {d.name}
+                      {d.isOfficial && (
+                        <span className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                          Oficial
+                        </span>
+                      )}
+                      {d.requiresAcknowledgement && (
+                        <span className="text-[10px] uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+                          Ciência
+                        </span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">v{d.version}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {d.description || '—'} · {new Date(d.updatedAt).toLocaleDateString('pt-BR')} · {d._count?.versions ?? 1} versões · {d._count?.shares ?? 0} compartilhamentos
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); fav.mutate(d.id); }}
+                    className="p-1.5 hover:bg-muted rounded"
+                  >
+                    <Star className={`h-4 w-4 ${d.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+                  </button>
+                  {scope === 'trash' ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); restore.mutate(d.id); }}
+                      className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+                    >
+                      Restaurar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); del.mutate(d.id); }}
+                      className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-card overflow-hidden">
-        {isLoading ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">Carregando…</div>
-        ) : (docs ?? []).length === 0 ? (
-          <div className="p-16 text-center">
-            <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-sm mt-3 text-muted-foreground">Nenhum documento ainda</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {docs!.map((d: any) => (
-              <li key={d.id} className="flex items-center gap-4 px-5 py-3 hover:bg-muted/30">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{d.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{d.description || '—'}</div>
-                </div>
-                {d.isOfficial && <span className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded font-medium">Oficial</span>}
-                <button onClick={() => handleDownload(d)} className="p-2 hover:bg-muted rounded">
-                  <Download className="h-4 w-4" />
-                </button>
-                <button onClick={() => del.mutate(d.id)} className="p-2 hover:bg-destructive/10 hover:text-destructive rounded">
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {selectedId && <DocumentPanel documentId={selectedId} onClose={() => setSelectedId(null)} />}
     </div>
   );
 }
