@@ -23,6 +23,40 @@ enum UserStatus {
   pending
 }
 
+enum Confidentiality {
+  public
+  internal
+  confidential
+  restricted
+}
+
+enum SharePriority {
+  normal
+  important
+  urgent
+}
+
+enum ShareScope {
+  user
+  department
+  role
+  all
+}
+
+enum ShareStatus {
+  delivered
+  viewed
+  opened
+  acknowledged
+}
+
+enum PublicLinkStatus {
+  active
+  expired
+  revoked
+  blocked
+}
+
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
@@ -47,6 +81,11 @@ model User {
   acknowledgements DocumentAcknowledgement[]
   refreshTokens RefreshToken[]
   accessOverride UserAccessOverride?
+  notifications  Notification[]
+  sharesCreated  DocumentShare[]     @relation("ShareCreator")
+  sharesReceived DocumentShare[]     @relation("ShareTarget")
+  publicLinks    DocumentPublicLink[]
+  events         DocumentEvent[]
 }
 
 model AccessTemplate {
@@ -111,6 +150,7 @@ model Department {
   createdAt DateTime @default(now())
   company   Company? @relation(fields: [companyId], references: [id])
   users     User[]
+  folders   Folder[]
 }
 
 model Category {
@@ -122,13 +162,23 @@ model Category {
 }
 
 model Folder {
-  id        String   @id @default(uuid())
-  name      String
-  parentId  String?
-  createdAt DateTime @default(now())
-  parent    Folder?  @relation("FolderChildren", fields: [parentId], references: [id])
-  children  Folder[] @relation("FolderChildren")
-  documents Document[]
+  id           String   @id @default(uuid())
+  name         String
+  parentId     String?
+  description  String?
+  tags         String[] @default([])
+  isOfficial   Boolean  @default(false)
+  departmentId String?
+  createdBy    String?
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  parent     Folder?     @relation("FolderChildren", fields: [parentId], references: [id])
+  children   Folder[]    @relation("FolderChildren")
+  department Department? @relation(fields: [departmentId], references: [id])
+  documents  Document[]
 }
 
 model Document {
@@ -141,10 +191,21 @@ model Document {
   mimeType               String?
   isOfficial             Boolean  @default(false)
   requiresAcknowledgement Boolean @default(false)
+  allowDownload          Boolean  @default(true)
+  allowShare             Boolean  @default(true)
+  confidentiality        Confidentiality @default(internal)
   author                 String?
+  tags                   String[] @default([])
   downloadCount          Int      @default(0)
+  viewCount              Int      @default(0)
+  version                Int      @default(1)
   categoryId             String?
   folderId               String?
+  responsibleId          String?
+  publishedAt            DateTime?
+  validUntil             DateTime?
+  isDeleted              Boolean  @default(false)
+  deletedAt              DateTime?
   createdBy              String
   updatedBy              String?
   createdAt              DateTime @default(now())
@@ -158,47 +219,104 @@ model Document {
   publicLinks DocumentPublicLink[]
   acknowledgements DocumentAcknowledgement[]
   favorites  DocumentFavorite[]
+  events     DocumentEvent[]
 }
 
 model DocumentVersion {
-  id         String   @id @default(uuid())
-  documentId String
-  version    Int
-  filePath   String
-  notes      String?
-  createdBy  String
-  createdAt  DateTime @default(now())
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  documentId    String
+  version       Int
+  filePath      String
+  fileSize      Int?
+  mimeType      String?
+  fileType      String?
+  isCurrent     Boolean  @default(false)
+  changeReason  String?
+  notes         String?
+  createdBy     String
+  createdAt     DateTime @default(now())
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  @@unique([documentId, version])
 }
 
 model DocumentShare {
-  id         String   @id @default(uuid())
-  documentId String
-  userId     String
-  canEdit    Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  @@unique([documentId, userId])
+  id                String       @id @default(uuid())
+  documentId        String
+  scope             ShareScope   @default(user)
+  targetUserId      String?
+  targetDepartmentId String?
+  targetRole        AppRole?
+  message           String?
+  priority          SharePriority @default(normal)
+  requireAck        Boolean      @default(false)
+  allowDownload     Boolean      @default(true)
+  allowReshare      Boolean      @default(false)
+  dueAt             DateTime?
+  status            ShareStatus  @default(delivered)
+  versionAtShare    Int?
+  deliveredAt       DateTime     @default(now())
+  viewedAt          DateTime?
+  openedAt          DateTime?
+  acknowledgedAt    DateTime?
+  createdBy         String
+  createdAt         DateTime     @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator  User     @relation("ShareCreator", fields: [createdBy], references: [id])
+  target   User?    @relation("ShareTarget", fields: [targetUserId], references: [id])
 }
 
 model DocumentPublicLink {
-  id         String   @id @default(uuid())
-  documentId String
-  token      String   @unique
-  expiresAt  DateTime?
-  createdBy  String
-  createdAt  DateTime @default(now())
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id             String   @id @default(uuid())
+  documentId     String
+  token          String   @unique
+  passwordHash   String?
+  recipientName  String?
+  recipientEmail String?
+  recipientPhone String?
+  recipientCompany String?
+  allowDownload  Boolean  @default(false)
+  requireAck     Boolean  @default(false)
+  requireIdentify Boolean @default(false)
+  blockPrint     Boolean  @default(false)
+  expiresAt      DateTime?
+  maxAccesses    Int?
+  accessCount    Int      @default(0)
+  failedAttempts Int      @default(0)
+  status         PublicLinkStatus @default(active)
+  revokedAt      DateTime?
+  notes          String?
+  createdBy      String
+  createdAt      DateTime @default(now())
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  creator        User     @relation(fields: [createdBy], references: [id])
+  accesses       PublicLinkAccess[]
+}
+
+model PublicLinkAccess {
+  id          String   @id @default(uuid())
+  linkId      String
+  action      String
+  ip          String?
+  userAgent   String?
+  actorName   String?
+  actorEmail  String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  link        DocumentPublicLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
 }
 
 model DocumentAcknowledgement {
   id         String   @id @default(uuid())
   documentId String
   userId     String
+  version    Int      @default(1)
+  ip         String?
+  userAgent  String?
   acknowledgedAt DateTime @default(now())
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([documentId, userId])
+  @@unique([documentId, userId, version])
 }
 
 model DocumentFavorite {
@@ -211,6 +329,37 @@ model DocumentFavorite {
   @@unique([documentId, userId])
 }
 
+model DocumentEvent {
+  id         String   @id @default(uuid())
+  documentId String
+  versionId  String?
+  userId     String?
+  actorType  String   @default("user")
+  actorLabel String?
+  action     String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id])
+  @@index([documentId, createdAt])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  body       String?
+  entityType String?
+  entityId   String?
+  url        String?
+  isRead     Boolean  @default(false)
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, isRead, createdAt])
+}
+
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String?
@@ -218,6 +367,8 @@ model AuditLog {
   entityType String?
   entityId   String?
   metadata   Json?
+  ip         String?
+  userAgent  String?
   createdAt  DateTime @default(now())
   user       User?    @relation(fields: [userId], references: [id])
 }

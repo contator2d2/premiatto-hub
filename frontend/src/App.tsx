@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import AuthPage from './pages/auth';
 import Dashboard from './pages/dashboard';
 import DocumentsPage from './pages/documents';
+import PublicDocumentPage from './pages/public-document';
 import UsersPage from './pages/users';
 import AuditPage from './pages/audit';
 import BrandingAdmin from './pages/admin/branding';
@@ -58,6 +59,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/p/:token" element={<PublicDocumentPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       <Route path="/dashboard" element={<Protected moduleKey="dashboard"><Dashboard /></Protected>} />
