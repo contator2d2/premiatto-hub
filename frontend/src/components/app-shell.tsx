@@ -68,7 +68,7 @@ function NavItem({
     <NavLink
       to={to}
       end={end}
-      className={({ isActive }) =>
+      className={({ isActive }: { isActive: boolean }) =>
         cn(
           'group relative flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-[13px] transition-colors',
           isActive
