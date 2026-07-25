@@ -30,7 +30,7 @@ const CARDS: Card[] = [
   { title: 'Departamentos', description: 'Estruture setores, hierarquia e áreas da operação.', icon: Layers, status: 'coming_soon', group: 'Organização' },
   { title: 'Categorias', description: 'Taxonomia global usada em documentos, marketing e cursos.', icon: FileCog, status: 'coming_soon', group: 'Organização' },
   { title: 'Usuários', description: 'Criar, editar e desativar usuários da plataforma.', icon: Users, to: '/users', status: 'live', group: 'Pessoas & Acesso' },
-  { title: 'Perfis & Permissões', description: 'Templates de permissões — Financeiro, Jurídico, Marketing, RH, etc.', icon: ShieldCheck, status: 'coming_soon', group: 'Pessoas & Acesso' },
+  { title: 'Templates de Acesso', description: 'Modelos de módulos visíveis por perfil (RBAC) e por usuário.', icon: ShieldCheck, to: '/admin/access-templates', status: 'live', group: 'Pessoas & Acesso' },
   { title: 'Autenticação & SSO', description: 'MFA, SSO corporativo, políticas de senha e sessões.', icon: KeySquare, status: 'coming_soon', group: 'Pessoas & Acesso' },
   { title: 'Identidade Visual', description: 'Nome, logos, favicon e cores institucionais da plataforma.', icon: Palette, to: '/admin/branding', status: 'live', group: 'Plataforma' },
   { title: 'Módulos', description: 'Ativar, desativar e configurar módulos do ecossistema.', icon: Sparkles, status: 'coming_soon', group: 'Plataforma' },

@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { BrandingModule } from './branding/branding.module';
 import { DocumentsModule } from './documents/documents.module';
 import { AuditModule } from './audit/audit.module';
+import { AccessTemplatesModule } from './access-templates/access-templates.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -26,6 +27,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     BrandingModule,
     DocumentsModule,
     AuditModule,
+    AccessTemplatesModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

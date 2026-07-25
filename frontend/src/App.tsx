@@ -8,6 +8,7 @@ import UsersPage from './pages/users';
 import AuditPage from './pages/audit';
 import BrandingAdmin from './pages/admin/branding';
 import SuperAdminPage from './pages/admin/super-admin';
+import AccessTemplatesPage from './pages/admin/access-templates';
 import ComingSoon from './pages/coming-soon';
 import AppShell from './components/app-shell';
 import { MODULES } from './lib/modules';
@@ -16,10 +17,12 @@ function Protected({
   children,
   adminOnly = false,
   superAdminOnly = false,
+  moduleKey,
 }: {
   children: ReactNode;
   adminOnly?: boolean;
   superAdminOnly?: boolean;
+  moduleKey?: string;
 }) {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
   if (loading)
@@ -31,6 +34,9 @@ function Protected({
   if (!user) return <Navigate to="/auth" replace />;
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/dashboard" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
+  if (moduleKey && !isSuperAdmin && user.allowedModules && !user.allowedModules.includes(moduleKey)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return <AppShell>{children}</AppShell>;
 }
 
@@ -54,16 +60,15 @@ export default function App() {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-      <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
-      <Route path="/documents" element={<Protected><DocumentsPage /></Protected>} />
+      <Route path="/dashboard" element={<Protected moduleKey="dashboard"><Dashboard /></Protected>} />
+      <Route path="/documents" element={<Protected moduleKey="documents"><DocumentsPage /></Protected>} />
 
-      {/* Módulos "em breve" — rotas reais para preservar a arquitetura */}
       {MODULES.filter((m) => m.status === 'coming_soon').map((m) => (
         <Route
           key={m.key}
           path={m.to}
           element={
-            <Protected>
+            <Protected moduleKey={m.key}>
               <ComingSoon
                 title={m.label}
                 description={m.description}
@@ -80,6 +85,7 @@ export default function App() {
 
       <Route path="/admin" element={<Protected superAdminOnly><SuperAdminPage /></Protected>} />
       <Route path="/admin/branding" element={<Protected superAdminOnly><BrandingAdmin /></Protected>} />
+      <Route path="/admin/access-templates" element={<Protected superAdminOnly><AccessTemplatesPage /></Protected>} />
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
