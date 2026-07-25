@@ -57,6 +57,29 @@ enum PublicLinkStatus {
   blocked
 }
 
+enum PolicyStatus {
+  draft
+  active
+  inactive
+  archived
+}
+
+enum PolicyInheritance {
+  full
+  partial
+  exception
+  override
+  locked
+}
+
+enum PolicyExceptionStatus {
+  pending
+  approved
+  rejected
+  expired
+}
+
+
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
