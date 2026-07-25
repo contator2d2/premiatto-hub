@@ -82,5 +82,6 @@ function run(command, args) {
 
 assertEnv();
 run('npx', ['prisma', 'migrate', 'deploy']);
+run('node', ['prisma/repair.js']);
 run('node', ['prisma/seed.js']);
 run('node', ['dist/main.js']);
