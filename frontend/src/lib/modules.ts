@@ -12,6 +12,7 @@ import {
   Target,
   BarChart3,
   Sparkles,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import type { AppRole } from './utils';
@@ -54,6 +55,16 @@ export const MODULES: PlatformModule[] = [
     icon: FileText,
     group: 'workspace',
     status: 'live',
+  },
+  {
+    key: 'policies',
+    to: '/admin/policies',
+    label: 'Políticas de Documentos',
+    description: 'Regras corporativas de segurança, compartilhamento, ciência e retenção.',
+    icon: ShieldCheck,
+    group: 'workspace',
+    status: 'live',
+    requiredRoles: ['super_admin', 'admin'],
   },
   {
     key: 'university',
