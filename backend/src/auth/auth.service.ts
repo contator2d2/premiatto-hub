@@ -107,7 +107,10 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
     const { passwordHash, ...rest } = user;
-    return { ...rest, roles: user.roles.map((r) => r.role) };
+    const roles = user.roles.map((r) => r.role);
+    const { computeAllowedModules } = await import('../access-templates/access.util');
+    const allowedModules = await computeAllowedModules(this.prisma, user.id, roles);
+    return { ...rest, roles, allowedModules };
   }
 
   async changePassword(userId: string, current: string, next: string) {
