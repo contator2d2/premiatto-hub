@@ -10,6 +10,7 @@ export type CurrentUser = {
   jobTitle: string | null;
   status: string;
   roles: AppRole[];
+  allowedModules?: string[];
 };
 
 type AuthCtx = {
