@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, Users, Share2, ShieldCheck, Search, Sparkles, TrendingUp } from "lucide-react";
+import { FileText, Users, Share2, ShieldCheck, Search, TrendingUp } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -80,10 +80,7 @@ function DashboardPage() {
     <div className="max-w-7xl mx-auto p-6 lg:p-10 space-y-10">
       <header className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            Premiatto Connect
-          </div>
+          <div className="text-xs text-muted-foreground">Premiatto Connect</div>
           <h1 className="text-3xl font-semibold tracking-tight mt-2">Olá, {firstName}.</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Aqui está o resumo da sua central de conhecimento.

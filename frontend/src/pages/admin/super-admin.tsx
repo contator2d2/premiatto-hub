@@ -12,7 +12,7 @@ import {
   HardDrive,
   ScrollText,
   KeySquare,
-  Sparkles,
+  LayoutGrid,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,7 +33,7 @@ const CARDS: Card[] = [
   { title: 'Templates de Acesso', description: 'Modelos de módulos visíveis por perfil (RBAC) e por usuário.', icon: ShieldCheck, to: '/admin/access-templates', status: 'live', group: 'Pessoas & Acesso' },
   { title: 'Autenticação & SSO', description: 'MFA, SSO corporativo, políticas de senha e sessões.', icon: KeySquare, status: 'coming_soon', group: 'Pessoas & Acesso' },
   { title: 'Identidade Visual', description: 'Nome, logos, favicon e cores institucionais da plataforma.', icon: Palette, to: '/admin/branding', status: 'live', group: 'Plataforma' },
-  { title: 'Módulos', description: 'Ativar, desativar e configurar módulos do ecossistema.', icon: Sparkles, status: 'coming_soon', group: 'Plataforma' },
+  { title: 'Módulos', description: 'Ativar, desativar e configurar módulos do ecossistema.', icon: LayoutGrid, status: 'coming_soon', group: 'Plataforma' },
   { title: 'Notificações', description: 'Canais, templates e regras de envio (e-mail, push, WhatsApp).', icon: Bell, status: 'coming_soon', group: 'Plataforma' },
   { title: 'Integrações', description: 'APIs, webhooks e integrações com ERPs, CRMs e BI.', icon: Plug, status: 'coming_soon', group: 'Plataforma' },
   { title: 'Storage', description: 'Buckets, cotas e políticas de retenção de arquivos.', icon: HardDrive, status: 'coming_soon', group: 'Infraestrutura' },

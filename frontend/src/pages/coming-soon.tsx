@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Lock, Sparkles, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Lock, Check, type LucideIcon } from 'lucide-react';
 
 type Props = {
   title: string;
@@ -44,7 +44,7 @@ export default function ComingSoon({ title, description, icon: Icon, bullets = [
                   key={b}
                   className="flex items-start gap-2.5 rounded-xl border border-border bg-background/60 backdrop-blur px-3.5 py-3"
                 >
-                  <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                  <Check className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                   <span className="text-sm text-foreground/90">{b}</span>
                 </li>
               ))}
