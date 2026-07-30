@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
@@ -9,15 +9,21 @@ import {
   Folder,
   Home,
   Star,
-  Clock,
   Trash2,
-  BadgeCheck,
-  Share2,
-  Users2,
-  Link2,
+  ShieldCheck,
   Bell,
   ChevronRight,
+  ChevronLeft,
   Download,
+  LayoutGrid,
+  List,
+  Info,
+  SlidersHorizontal,
+  MoreHorizontal,
+  HardDrive,
+  Settings2,
+  ArrowUp,
+  Share2,
 } from 'lucide-react';
 import { api, downloadDocument } from '@/lib/api';
 import { DocumentPanel } from '@/components/document-panel';
@@ -49,6 +55,28 @@ const SCOPE_LABELS: Record<Scope, string> = {
   trash: 'Lixeira',
 };
 
+const extTint = (name: string) => {
+  const ext = name.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return 'bg-rose-100 text-rose-600';
+  if (ext === 'doc' || ext === 'docx') return 'bg-blue-100 text-blue-600';
+  if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'bg-emerald-100 text-emerald-600';
+  if (ext === 'ppt' || ext === 'pptx') return 'bg-orange-100 text-orange-600';
+  if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext || '')) return 'bg-violet-100 text-violet-600';
+  return 'bg-slate-100 text-slate-600';
+};
+const extLabel = (name: string) => (name.split('.').pop() || 'doc').toUpperCase().slice(0, 4);
+
+const relativeDate = (value: string) => {
+  const d = new Date(value);
+  const today = new Date();
+  const sameDay = d.toDateString() === today.toDateString();
+  const yesterday = new Date(today.getTime() - 86400000).toDateString() === d.toDateString();
+  const hhmm = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  if (sameDay) return `Hoje às ${hhmm}`;
+  if (yesterday) return `Ontem às ${hhmm}`;
+  return d.toLocaleDateString('pt-BR');
+};
+
 export default function DocumentsPage() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
@@ -60,6 +88,12 @@ export default function DocumentsPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [search, setSearch] = useState('');
   const [showUploadMeta, setShowUploadMeta] = useState(false);
+  const [view, setView] = useState<'list' | 'grid'>('list');
+  const [showFilters, setShowFilters] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'all' | 'official' | 'ack'>('all');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [moreMenu, setMoreMenu] = useState(false);
   const [uploadMeta, setUploadMeta] = useState({
     isOfficial: false,
     requiresAcknowledgement: false,
@@ -77,14 +111,26 @@ export default function DocumentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
-  // Reset folder navigation when filter changes
   useEffect(() => {
     setFolderId(null);
   }, [filterParam]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [filterParam, folderId, search, typeFilter, perPage]);
+
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => (await api.get('/dashboard/stats')).data as any,
+  });
+
   const { data: folders } = useQuery({
     queryKey: ['folders', folderId],
     queryFn: async () => (await api.get(`/folders?parentId=${folderId ?? ''}`)).data as any[],
+  });
+  const { data: rootFolders } = useQuery({
+    queryKey: ['folders', 'root'],
+    queryFn: async () => (await api.get('/folders?parentId=')).data as any[],
   });
   const { data: currentFolder } = useQuery({
     queryKey: ['folder', folderId],
@@ -95,13 +141,25 @@ export default function DocumentsPage() {
   const { data: docs, isLoading } = useQuery({
     queryKey: ['docs', scope, folderId, search],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      params.set('scope', scope);
-      if (folderId) params.set('folderId', folderId);
-      if (search) params.set('search', search);
-      return (await api.get(`/documents?${params.toString()}`)).data as any[];
+      const qp = new URLSearchParams();
+      qp.set('scope', scope);
+      if (folderId) qp.set('folderId', folderId);
+      if (search) qp.set('search', search);
+      return (await api.get(`/documents?${qp.toString()}`)).data as any[];
     },
   });
+
+  const filteredDocs = useMemo(() => {
+    let list = docs ?? [];
+    if (typeFilter === 'official') list = list.filter((d: any) => d.isOfficial);
+    if (typeFilter === 'ack') list = list.filter((d: any) => d.requiresAcknowledgement);
+    return list;
+  }, [docs, typeFilter]);
+
+  const totalItems = filteredDocs.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+  const pageDocs = filteredDocs.slice((page - 1) * perPage, page * perPage);
+  const subFolders = folderId ? folders ?? [] : rootFolders ?? [];
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
@@ -156,85 +214,495 @@ export default function DocumentsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['docs'] }),
   });
 
+  const t = stats?.totals;
+  const storagePct = Math.min(100, Math.round(((t?.documents ?? 0) / 2000) * 100));
+
+  const kpis = [
+    {
+      label: 'Total de documentos',
+      value: t?.documents ?? 0,
+      icon: FileText,
+      tint: 'bg-blue-50 text-blue-600',
+      hint: 'no ambiente',
+    },
+    {
+      label: 'Documentos oficiais',
+      value: t?.officials ?? 0,
+      icon: ShieldCheck,
+      tint: 'bg-amber-50 text-amber-600',
+      hint: 'com validação',
+    },
+    {
+      label: 'Pendentes de leitura',
+      value: t?.pendingAcksMine ?? 0,
+      icon: Bell,
+      tint: 'bg-rose-50 text-rose-600',
+      hint: 'aguardando ciência',
+      alert: true,
+    },
+  ];
+
+  const handleDownload = async (d: any) => {
+    if (!d.allowDownload) {
+      toast.error('Download não permitido para este documento');
+      return;
+    }
+    try {
+      await downloadDocument(d.id, d.name);
+    } catch (err: any) {
+      toast.error(err?.message || 'Falha no download');
+    }
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-4rem)]">
-      {/* Compact folders sub-sidebar */}
-      <aside className="w-56 border-r border-border bg-card p-3 space-y-1 shrink-0 hidden lg:block">
-        <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-          Pastas
-          <button
-            onClick={() => setShowNewFolder(true)}
-            className="p-1 rounded hover:bg-muted text-muted-foreground"
-            title="Nova pasta"
-          >
-            <FolderPlus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <button
-          onClick={() => setFolderId(null)}
-          className={cn(
-            'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-            !folderId ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
-          <Home className="h-4 w-4" />
-          Raiz
-        </button>
-        {(folders ?? []).map((f: any) => (
-          <button
-            key={f.id}
-            onClick={() => setFolderId(f.id)}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
-              folderId === f.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            <Folder className="h-4 w-4" />
-            <span className="truncate flex-1">{f.name}</span>
-            <span className="text-[10px] text-muted-foreground">{f._count?.documents ?? 0}</span>
-          </button>
-        ))}
-        {(folders ?? []).length === 0 && (
-          <div className="px-2.5 py-3 text-[11px] text-muted-foreground">Nenhuma pasta ainda.</div>
-        )}
-      </aside>
-
-      <div className="flex-1 min-w-0 p-6 lg:p-8 space-y-5">
-        <header className="flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight font-display">
-              {folderId && currentFolder ? currentFolder.name : SCOPE_LABELS[scope]}
+      <div className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-5">
+        {/* Page header */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl lg:text-[28px] font-semibold tracking-tight font-display">
+              {folderId && currentFolder ? currentFolder.name : 'Central de Documentos'}
             </h1>
-            {folderId && currentFolder?.breadcrumb && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                <button onClick={() => setFolderId(null)} className="hover:underline">Todos</button>
-                {currentFolder.breadcrumb.map((b: any, i: number) => (
-                  <span key={b.id} className="flex items-center gap-1">
-                    <ChevronRight className="h-3 w-3" />
+            <p className="text-sm text-muted-foreground mt-1">
+              Organize, compartilhe e gerencie todos os documentos da empresa.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNewFolder(true)}
+              className="h-10 px-4 rounded-lg border border-border bg-card text-sm font-medium inline-flex items-center gap-2 hover:bg-muted transition-colors"
+            >
+              <FolderPlus className="h-4 w-4" /> Criar pasta
+            </button>
+            <button
+              onClick={() => setShowUploadMeta(true)}
+              className="h-10 px-4 rounded-lg gradient-brand text-primary-foreground text-sm font-medium inline-flex items-center gap-2 shadow-sm"
+            >
+              <Upload className="h-4 w-4" /> Enviar arquivo
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setMoreMenu((v) => !v)}
+                className="h-10 w-10 rounded-lg border border-border bg-card inline-flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+              {moreMenu && (
+                <div
+                  className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-popover shadow-elegant p-1 z-20 text-sm"
+                  onMouseLeave={() => setMoreMenu(false)}
+                >
+                  <button
+                    onClick={() => { setView(view === 'list' ? 'grid' : 'list'); setMoreMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted"
+                  >
+                    Alternar visualização
+                  </button>
+                  <button
+                    onClick={() => { setShowFilters(true); setMoreMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted"
+                  >
+                    Filtros avançados
+                  </button>
+                  <button
+                    onClick={() => { setParams(new URLSearchParams({ filter: 'trash' })); setMoreMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted"
+                  >
+                    Abrir lixeira
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* KPIs */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {kpis.map((k) => (
+            <div key={k.label} className="rounded-xl border border-border bg-card p-4 shadow-card flex items-center gap-3">
+              <div className={`h-10 w-10 rounded-lg ${k.tint} flex items-center justify-center shrink-0`}>
+                <k.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-medium text-muted-foreground truncate">{k.label}</div>
+                <div className="text-2xl font-display font-semibold tracking-tight leading-tight">
+                  {(k.value as number).toLocaleString('pt-BR')}
+                </div>
+                <div className={cn('text-[11px] flex items-center gap-1', k.alert ? 'text-rose-600' : 'text-emerald-600')}>
+                  {!k.alert && <ArrowUp className="h-3 w-3" />}
+                  {k.hint}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="rounded-xl border border-border bg-card p-4 shadow-card">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-medium text-muted-foreground">Espaço utilizado</div>
+              <HardDrive className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="mt-1 text-xl font-display font-semibold tracking-tight">
+              {t?.documents ?? 0} / 2.000 arquivos
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${storagePct}%` }} />
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground">{storagePct}%</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Explorer */}
+        <section className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+          {/* Toolbar */}
+          <div className="px-4 sm:px-5 py-3 border-b border-border flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 text-sm min-w-0">
+              <button
+                onClick={() => setFolderId(null)}
+                className={cn('hover:underline truncate', folderId ? 'text-muted-foreground' : 'font-semibold')}
+              >
+                {SCOPE_LABELS[scope]}
+              </button>
+              {folderId &&
+                (currentFolder?.breadcrumb ?? []).map((b: any, i: number) => (
+                  <span key={b.id} className="flex items-center gap-1.5 min-w-0">
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <button
                       onClick={() => setFolderId(b.id)}
-                      className={i === currentFolder.breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:underline'}
+                      className={cn(
+                        'truncate',
+                        i === currentFolder.breadcrumb.length - 1 ? 'font-semibold' : 'text-muted-foreground hover:underline',
+                      )}
                     >
                       {b.name}
                     </button>
                   </span>
                 ))}
-              </div>
-            )}
+            </div>
+            <div className="flex-1" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar nesta pasta…"
+              className="h-9 px-3 rounded-lg border border-input bg-background text-sm w-full sm:w-56"
+            />
+            <div className="inline-flex rounded-lg border border-border p-0.5">
+              <button
+                onClick={() => setView('list')}
+                className={cn('h-8 w-8 rounded-md inline-flex items-center justify-center', view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')}
+                title="Lista"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setView('grid')}
+                className={cn('h-8 w-8 rounded-md inline-flex items-center justify-center', view === 'grid' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted')}
+                title="Grade"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => setSelectedId(pageDocs[0]?.id ?? null)}
+              className="h-9 w-9 rounded-lg border border-border inline-flex items-center justify-center text-muted-foreground hover:bg-muted"
+              title="Detalhes"
+            >
+              <Info className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setShowFilters((v) => !v)}
+              className={cn(
+                'h-9 px-3 rounded-lg border border-border inline-flex items-center gap-2 text-sm',
+                showFilters ? 'bg-primary/10 text-primary border-primary/30' : 'text-muted-foreground hover:bg-muted',
+              )}
+            >
+              <SlidersHorizontal className="h-4 w-4" /> Filtros
+            </button>
           </div>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar arquivos…"
-            className="h-10 px-3 rounded-lg border border-input bg-background text-sm w-72"
-          />
-          <button
-            onClick={() => setShowUploadMeta(true)}
-            className="h-10 px-4 rounded-lg gradient-brand text-primary-foreground text-sm font-medium inline-flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" /> Enviar arquivo
-          </button>
-        </header>
+
+          {showFilters && (
+            <div className="px-4 sm:px-5 py-3 border-b border-border bg-muted/30 flex flex-wrap items-center gap-2 text-sm">
+              {(
+                [
+                  ['all', 'Todos'],
+                  ['official', 'Somente oficiais'],
+                  ['ack', 'Exigem ciência'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setTypeFilter(key)}
+                  className={cn(
+                    'h-8 px-3 rounded-full border text-xs font-medium',
+                    typeFilter === key ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex">
+            {/* Folder tree */}
+            <aside className="w-56 border-r border-border p-3 shrink-0 hidden lg:flex flex-col">
+              <div className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                Pastas
+                <button
+                  onClick={() => setShowNewFolder(true)}
+                  className="p-1 rounded hover:bg-muted text-muted-foreground"
+                  title="Nova pasta"
+                >
+                  <FolderPlus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="space-y-0.5 flex-1 overflow-y-auto">
+                <button
+                  onClick={() => setFolderId(null)}
+                  className={cn(
+                    'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+                    !folderId ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  <Home className="h-4 w-4" />
+                  {SCOPE_LABELS[scope]}
+                </button>
+                {(rootFolders ?? []).map((f: any) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFolderId(f.id)}
+                    className={cn(
+                      'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors text-left',
+                      folderId === f.id ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    <Folder className="h-4 w-4 shrink-0" />
+                    <span className="truncate flex-1">{f.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{f._count?.documents ?? 0}</span>
+                  </button>
+                ))}
+                {(rootFolders ?? []).length === 0 && (
+                  <div className="px-2.5 py-3 text-[11px] text-muted-foreground">Nenhuma pasta ainda.</div>
+                )}
+              </div>
+              <div className="pt-3 mt-3 border-t border-border space-y-2">
+                <button
+                  onClick={() => setShowNewFolder(true)}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-muted-foreground hover:bg-muted"
+                >
+                  <Settings2 className="h-3.5 w-3.5" /> Gerenciar pastas
+                </button>
+                <div className="px-1 space-y-1.5">
+                  <div className="text-[10px] text-muted-foreground">
+                    {t?.documents ?? 0} de 2.000 arquivos utilizados
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${storagePct}%` }} />
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              {isLoading ? (
+                <div className="p-10 text-center text-sm text-muted-foreground">Carregando…</div>
+              ) : subFolders.length === 0 && totalItems === 0 ? (
+                <div className="p-16 text-center">
+                  <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="text-sm mt-3 text-muted-foreground">Nenhum documento nesta visualização.</p>
+                </div>
+              ) : view === 'grid' ? (
+                <div className="p-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {page === 1 &&
+                    subFolders.map((f: any) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setFolderId(f.id)}
+                        className="rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-primary/[0.02] transition-all"
+                      >
+                        <Folder className="h-8 w-8 text-amber-500" />
+                        <div className="mt-3 text-sm font-medium truncate">{f.name}</div>
+                        <div className="text-xs text-muted-foreground">{f._count?.documents ?? 0} arquivos</div>
+                      </button>
+                    ))}
+                  {pageDocs.map((d: any) => (
+                    <button
+                      key={d.id}
+                      onClick={() => setSelectedId(d.id)}
+                      className="rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-primary/[0.02] transition-all"
+                    >
+                      <div className={`h-9 w-9 rounded-lg ${extTint(d.name)} flex items-center justify-center text-[10px] font-bold`}>
+                        {extLabel(d.name)}
+                      </div>
+                      <div className="mt-3 text-sm font-medium truncate">{d.name}</div>
+                      <div className="text-xs text-muted-foreground">v{d.version} · {relativeDate(d.updatedAt)}</div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[11px] font-medium text-muted-foreground uppercase tracking-wider bg-muted/40">
+                        <th className="px-5 py-3 font-medium">Nome</th>
+                        <th className="px-4 py-3 font-medium">Versão</th>
+                        <th className="px-4 py-3 font-medium hidden md:table-cell">Atualizado em</th>
+                        <th className="px-4 py-3 font-medium hidden lg:table-cell">Atualizado por</th>
+                        <th className="px-4 py-3 font-medium text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {page === 1 &&
+                        subFolders.map((f: any) => (
+                          <tr key={f.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setFolderId(f.id)}>
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <Folder className="h-5 w-5 text-amber-500 shrink-0" />
+                                <span className="font-medium truncate">{f.name}</span>
+                                <span className="text-[10px] uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-semibold">
+                                  Pasta
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">—</td>
+                            <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                              {f.updatedAt ? relativeDate(f.updatedAt) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
+                              {f.createdBy?.fullName || '—'}
+                            </td>
+                            <td className="px-4 py-3 text-right text-muted-foreground">
+                              <ChevronRight className="h-4 w-4 inline" />
+                            </td>
+                          </tr>
+                        ))}
+                      {pageDocs.map((d: any) => (
+                        <tr key={d.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedId(d.id)}>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={`h-7 w-7 rounded ${extTint(d.name)} flex items-center justify-center text-[9px] font-bold shrink-0`}>
+                                {extLabel(d.name)}
+                              </div>
+                              <span className="font-medium truncate">{d.name}</span>
+                              {d.isOfficial && (
+                                <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                                  Oficial
+                                </span>
+                              )}
+                              {d.requiresAcknowledgement && (
+                                <span className="text-[10px] uppercase tracking-wider bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-semibold shrink-0">
+                                  Ciência
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">v{d.version}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{relativeDate(d.updatedAt)}</td>
+                          <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell truncate">
+                            {d.owner?.fullName || d.createdBy?.fullName || '—'}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                title="Baixar"
+                                onClick={(e) => { e.stopPropagation(); handleDownload(d); }}
+                                className="p-1.5 hover:bg-muted rounded"
+                              >
+                                <Download className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                              <button
+                                title="Favoritar"
+                                onClick={(e) => { e.stopPropagation(); fav.mutate(d.id); }}
+                                className="p-1.5 hover:bg-muted rounded"
+                              >
+                                <Star className={`h-4 w-4 ${d.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
+                              </button>
+                              <button
+                                title="Compartilhar"
+                                onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); }}
+                                className="p-1.5 hover:bg-muted rounded"
+                              >
+                                <Share2 className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                              {scope === 'trash' ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); restore.mutate(d.id); }}
+                                  className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+                                >
+                                  Restaurar
+                                </button>
+                              ) : (
+                                <button
+                                  title="Excluir"
+                                  onClick={(e) => { e.stopPropagation(); del.mutate(d.id); }}
+                                  className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Pagination */}
+              {totalItems > 0 && (
+                <div className="px-5 py-3 border-t border-border flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <div>
+                    Mostrando {(page - 1) * perPage + 1} a {Math.min(page * perPage, totalItems)} de {totalItems} itens
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="h-8 w-8 rounded-lg border border-border inline-flex items-center justify-center disabled:opacity-40 hover:bg-muted"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    {Array.from({ length: totalPages })
+                      .slice(0, 5)
+                      .map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setPage(i + 1)}
+                          className={cn(
+                            'h-8 min-w-8 px-2 rounded-lg border text-xs font-medium',
+                            page === i + 1 ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted',
+                          )}
+                        >
+                          {i + 1}
+                        </button>
+                      ))}
+                    {totalPages > 5 && <span>…</span>}
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      className="h-8 w-8 rounded-lg border border-border inline-flex items-center justify-center disabled:opacity-40 hover:bg-muted"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <select
+                      value={perPage}
+                      onChange={(e) => setPerPage(Number(e.target.value))}
+                      className="h-8 px-2 rounded-lg border border-input bg-background text-xs"
+                    >
+                      {[10, 20, 50].map((n) => (
+                        <option key={n} value={n}>
+                          {n} por página
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         {showNewFolder && (
           <div className="rounded-xl border border-border bg-card p-4 flex gap-2">
@@ -316,80 +784,6 @@ export default function DocumentsPage() {
             </div>
           </div>
         )}
-
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          {isLoading ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">Carregando…</div>
-          ) : (docs ?? []).length === 0 ? (
-            <div className="p-16 text-center">
-              <FileText className="h-8 w-8 mx-auto text-muted-foreground" />
-              <p className="text-sm mt-3 text-muted-foreground">Nenhum documento nesta visualização.</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-border">
-              {docs!.map((d: any) => (
-                <li
-                  key={d.id}
-                  className="flex items-center gap-4 px-5 py-3 hover:bg-muted/30 cursor-pointer"
-                  onClick={() => setSelectedId(d.id)}
-                >
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate flex items-center gap-2">
-                      {d.name}
-                      {d.isOfficial && (
-                        <span className="text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                          Oficial
-                        </span>
-                      )}
-                      {d.requiresAcknowledgement && (
-                        <span className="text-[10px] uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
-                          Ciência
-                        </span>
-                      )}
-                      <span className="text-[10px] text-muted-foreground">v{d.version}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {d.description || '—'} · {new Date(d.updatedAt).toLocaleDateString('pt-BR')} · {d._count?.versions ?? 1} versões · {d._count?.shares ?? 0} compartilhamentos
-                    </div>
-                  </div>
-                  <button
-                    title="Baixar"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      if (!d.allowDownload) { toast.error('Download não permitido para este documento'); return; }
-                      try { await downloadDocument(d.id, d.name); } catch (err: any) { toast.error(err?.message || 'Falha no download'); }
-                    }}
-                    className="p-1.5 hover:bg-muted rounded"
-                  >
-                    <Download className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); fav.mutate(d.id); }}
-                    className="p-1.5 hover:bg-muted rounded"
-                  >
-                    <Star className={`h-4 w-4 ${d.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
-                  </button>
-                  {scope === 'trash' ? (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); restore.mutate(d.id); }}
-                      className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
-                    >
-                      Restaurar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); del.mutate(d.id); }}
-                      className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
 
       {selectedId && <DocumentPanel documentId={selectedId} onClose={() => setSelectedId(null)} />}
