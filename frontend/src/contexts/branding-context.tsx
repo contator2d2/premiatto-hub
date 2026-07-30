@@ -21,29 +21,52 @@ type BrandingCtx = {
 
 const Ctx = createContext<BrandingCtx | null>(null);
 
-function hexToOklchApprox(hex: string) {
-  // simples: só definimos como CSS var raw hex; navegador aceita em background/color mas nossas vars são oklch.
-  // Vamos sobrescrever --primary e --accent com o hex diretamente (color-mix continua funcionando).
-  return hex;
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function safeColor(value?: string | null) {
+  if (!value) return null;
+  const v = value.trim();
+  return HEX.test(v) ? v : null;
+}
+
+function setFavicon(url: string) {
+  // só troca o favicon se a imagem realmente carregar (evita ícone quebrado)
+  const probe = new Image();
+  probe.onload = () => {
+    document
+      .querySelectorAll<HTMLLinkElement>("link[rel~='icon']")
+      .forEach((el) => el.parentElement?.removeChild(el));
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.href = url;
+    document.head.appendChild(link);
+  };
+  probe.src = url;
 }
 
 function applyBranding(b: Branding) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  root.style.setProperty('--primary', hexToOklchApprox(b.primaryColor));
-  root.style.setProperty('--accent', hexToOklchApprox(b.accentColor));
-  root.style.setProperty('--ring', b.accentColor);
-  if (b.appName) document.title = b.appName;
-  if (b.faviconUrl) {
-    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      document.head.appendChild(link);
-    }
-    link.href = b.faviconUrl;
+  const primary = safeColor(b.primaryColor);
+  const accent = safeColor(b.accentColor);
+  if (primary) {
+    root.style.setProperty('--primary', primary);
+    root.style.setProperty('--primary-glow', primary);
+  } else {
+    root.style.removeProperty('--primary');
+    root.style.removeProperty('--primary-glow');
   }
+  if (accent) {
+    root.style.setProperty('--accent', accent);
+    root.style.setProperty('--ring', accent);
+  } else {
+    root.style.removeProperty('--accent');
+    root.style.removeProperty('--ring');
+  }
+  if (b.appName) document.title = b.appName;
+  if (b.faviconUrl) setFavicon(b.faviconUrl);
 }
+
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
   const [branding, setBranding] = useState<Branding | null>(null);
