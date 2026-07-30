@@ -33,6 +33,12 @@ export class UsersController {
     return this.users.setRoles(id, body.roles || []);
   }
 
+  @Put(':id/password')
+  resetPassword(@Param('id') id: string, @Body() body: { password: string }) {
+    return this.users.resetPassword(id, body?.password);
+  }
+
+
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.users.remove(id);
