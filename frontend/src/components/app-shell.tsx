@@ -1,4 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown,
@@ -19,6 +21,7 @@ import {
   Share2,
   Settings,
   ShieldCheck,
+  KeyRound,
   Sun,
   Trash2,
   Users,
@@ -167,6 +170,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { branding } = useBranding();
   const [userMenu, setUserMenu] = useState(false);
+  const [pwdModal, setPwdModal] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(true);
@@ -452,6 +456,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {userMenu && expanded && (
             <div className="absolute bottom-full left-3 right-3 mb-2 rounded-xl border border-sidebar-border bg-sidebar-2 shadow-2xl overflow-hidden">
               <button
+                onClick={() => { setUserMenu(false); setPwdModal(true); }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-sidebar-foreground hover:bg-white/[0.06]"
+              >
+                <KeyRound className="h-4 w-4" />
+                Trocar senha
+              </button>
+              <button
                 onClick={async () => {
                   await logout();
                   navigate('/auth');
@@ -513,6 +524,51 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </button>
         </header>
         <main className="flex-1 min-w-0 overflow-x-hidden">{children}</main>
+      </div>
+      {pwdModal && <ChangePasswordModal onClose={() => setPwdModal(false)} />}
+    </div>
+  );
+}
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (newPassword.length < 6) return toast.error('A nova senha precisa de ao menos 6 caracteres');
+    if (newPassword !== confirm) return toast.error('As senhas não conferem');
+    setSaving(true);
+    try {
+      await api.post('/auth/change-password', { currentPassword, newPassword });
+      toast.success('Senha alterada com sucesso');
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || 'Falha ao alterar senha');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6">
+      <div className="w-full sm:max-w-md bg-background border border-border rounded-t-2xl sm:rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold font-display">Trocar senha</h2>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <input type="password" placeholder="Senha atual" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm" />
+          <input type="password" placeholder="Nova senha" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm" />
+          <input type="password" placeholder="Confirmar nova senha" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm" />
+        </div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="h-10 px-4 rounded-lg border border-border text-sm">Cancelar</button>
+          <button onClick={submit} disabled={saving} className="h-10 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium disabled:opacity-60">
+            {saving ? 'Salvando…' : 'Salvar'}
+          </button>
+        </div>
       </div>
     </div>
   );
