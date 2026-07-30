@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
-import { api } from '@/lib/api';
+import { api, assetUrl } from '@/lib/api';
 
 export type Branding = {
   id: string;
@@ -64,7 +64,8 @@ function applyBranding(b: Branding) {
     root.style.removeProperty('--ring');
   }
   if (b.appName) document.title = b.appName;
-  if (b.faviconUrl) setFavicon(b.faviconUrl);
+  const favicon = assetUrl(b.faviconUrl);
+  if (favicon) setFavicon(favicon);
 }
 
 

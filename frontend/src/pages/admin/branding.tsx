@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 import { useBranding } from '@/contexts/branding-context';
-import { api } from '@/lib/api';
+import { api, assetUrl } from '@/lib/api';
 
 export default function BrandingAdmin() {
   const { branding, save, refresh } = useBranding();
@@ -118,7 +118,7 @@ function AssetUpload({ label, url, onPick }: { label: string; url: string; onPic
     <div className="space-y-1.5">
       <label className="text-sm font-medium">{label}</label>
       <button type="button" onClick={onPick} className="w-full h-24 rounded-lg border-2 border-dashed border-border hover:border-primary flex items-center justify-center overflow-hidden bg-background">
-        {url ? <img src={url} alt="" className="max-h-full max-w-full object-contain" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground"><Upload className="h-4 w-4" /> Enviar</div>}
+        {url ? <img src={assetUrl(url)} alt="" className="max-h-full max-w-full object-contain" /> : <div className="flex items-center gap-2 text-sm text-muted-foreground"><Upload className="h-4 w-4" /> Enviar</div>}
       </button>
     </div>
   );
