@@ -199,6 +199,11 @@ export class DocumentsController {
 
 
 
+  @Get('documents/:id/acknowledgements')
+  acks(@Param('id') id: string) {
+    return this.docs.acknowledgements(id);
+  }
+
   @Post('documents/:id/acknowledge')
   ack(@CurrentUser('id') userId: string, @Param('id') id: string, @Ip() ip: string, @Req() req: any) {
     return this.docs.acknowledge(userId, id, ip, req.headers['user-agent']);

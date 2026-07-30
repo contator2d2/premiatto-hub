@@ -24,16 +24,18 @@ import { ShareExternalModal } from './share-external-modal';
 import { ShareStatus } from './share-status';
 import { useAuth } from '@/contexts/auth-context';
 
-type Props = { documentId: string; onClose: () => void };
+type Props = { documentId: string; onClose: () => void; initialTab?: Tab };
 
-type Tab = 'overview' | 'versions' | 'shares' | 'links' | 'timeline';
+export type PanelTab = 'overview' | 'details' | 'versions' | 'shares' | 'acks' | 'timeline' | 'permissions';
+type Tab = 'overview' | 'details' | 'versions' | 'shares' | 'acks' | 'timeline' | 'permissions';
 
-export function DocumentPanel({ documentId, onClose }: Props) {
+export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'overview');
   const [showShare, setShowShare] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
+  const [shareChooser, setShareChooser] = useState(false);
   const versionInputRef = useRef<HTMLInputElement>(null);
 
   const { data: doc, isLoading } = useQuery({
@@ -57,8 +59,25 @@ export function DocumentPanel({ documentId, onClose }: Props) {
   const { data: links } = useQuery({
     queryKey: ['doc-public-links', documentId],
     queryFn: async () => (await api.get(`/public-links?documentId=${documentId}`)).data as any[],
-    enabled: tab === 'links',
+    enabled: tab === 'shares',
   });
+  const { data: acks } = useQuery({
+    queryKey: ['doc-acks', documentId],
+    queryFn: async () => (await api.get(`/documents/${documentId}/acknowledgements`)).data as any[],
+    enabled: tab === 'acks',
+  });
+
+  const updateMeta = useMutation({
+    mutationFn: async (patch: Record<string, any>) => (await api.put(`/documents/${documentId}`, patch)).data,
+    onSuccess: () => {
+      toast.success('Documento atualizado');
+      qc.invalidateQueries({ queryKey: ['doc', documentId] });
+      qc.invalidateQueries({ queryKey: ['docs'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Falha ao atualizar'),
+  });
+
+
 
   const ack = useMutation({
     mutationFn: async () => (await api.post(`/documents/${documentId}/acknowledge`)).data,
@@ -164,34 +183,64 @@ export function DocumentPanel({ documentId, onClose }: Props) {
             </button>
           )}
           {doc.allowShare && (
-            <>
-              <button onClick={() => setShowShare(true)} className="h-9 px-3 rounded-lg border border-border text-sm inline-flex items-center gap-2">
-                <Share2 className="h-4 w-4" /> Interno
+            <div className="relative">
+              <button
+                onClick={() => setShareChooser((v) => !v)}
+                className="h-9 px-3 rounded-lg gradient-brand text-primary-foreground text-sm inline-flex items-center gap-2"
+              >
+                <Share2 className="h-4 w-4" /> Compartilhar
               </button>
-              <button onClick={() => setShowExternal(true)} className="h-9 px-3 rounded-lg gradient-brand text-primary-foreground text-sm inline-flex items-center gap-2">
-                <Link2 className="h-4 w-4" /> Externo
-              </button>
-            </>
+              {shareChooser && (
+                <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-popover shadow-elegant p-2 z-30 text-left">
+                  <button
+                    onClick={() => { setShareChooser(false); setShowShare(true); }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted flex gap-3"
+                  >
+                    <Users2 className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>
+                      <span className="block text-sm font-medium">Compartilhar com usuário da plataforma</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Usuário, perfil, departamento ou todos.
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => { setShareChooser(false); setShowExternal(true); }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted flex gap-3"
+                  >
+                    <ExternalLink className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>
+                      <span className="block text-sm font-medium">Compartilhar com pessoa externa</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Link com token, senha, validade, limite de acesso e ciência.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <button onClick={onClose} className="p-2 rounded hover:bg-muted">
             <X className="h-4 w-4" />
           </button>
         </header>
 
-        <div className="border-b border-border px-5 flex gap-4 text-sm">
+        <div className="border-b border-border px-5 flex gap-4 text-sm overflow-x-auto">
           {(
             [
-              ['overview', 'Visão', Info],
+              ['overview', 'Visualização', Info],
+              ['details', 'Detalhes', Info],
               ['versions', 'Versões', History],
               ['shares', 'Compartilhamentos', Users2],
-              ['links', 'Links externos', Link2],
+              ['acks', 'Confirmações de leitura', BadgeCheck],
               ['timeline', 'Histórico', MessageSquare],
+              ['permissions', 'Permissões', ShieldCheck],
             ] as [Tab, string, any][]
           ).map(([k, label, Icon]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`py-3 border-b-2 -mb-px inline-flex items-center gap-1.5 ${
+              className={`py-3 border-b-2 -mb-px inline-flex items-center gap-1.5 whitespace-nowrap ${
                 tab === k ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -199,6 +248,7 @@ export function DocumentPanel({ documentId, onClose }: Props) {
             </button>
           ))}
         </div>
+
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {tab === 'overview' && (
@@ -229,7 +279,28 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                   </button>
                 </div>
               )}
+            </>
+          )}
+
+          {tab === 'details' && (
+            <>
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Pasta</div>
+                  <div>{doc.folder?.name || 'Raiz'}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Versão vigente</div>
+                  <div>v{doc.version}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Criado por</div>
+                  <div>{doc.creator?.fullName || doc.creator?.email || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Última atualização</div>
+                  <div>{new Date(doc.updatedAt).toLocaleString('pt-BR')}</div>
+                </div>
                 <div className="rounded-lg border border-border bg-card p-4 space-y-1">
                   <div className="text-xs uppercase tracking-wider text-muted-foreground">Publicação</div>
                   <div>{doc.publishedAt ? new Date(doc.publishedAt).toLocaleString('pt-BR') : '—'}</div>
@@ -247,8 +318,88 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                   <div>{doc.viewCount} visualizações · {doc.downloadCount} downloads</div>
                 </div>
               </div>
+              <div className="rounded-lg border border-border bg-card p-4 text-sm space-y-1">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Descrição</div>
+                <div>{doc.description || 'Sem descrição'}</div>
+              </div>
+              {(doc.tags ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {doc.tags.map((tg: string) => (
+                    <span key={tg} className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      #{tg}
+                    </span>
+                  ))}
+                </div>
+              )}
             </>
           )}
+
+          {tab === 'acks' && (
+            <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
+              {(acks ?? []).length === 0 && (
+                <li className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma confirmação de leitura registrada.
+                </li>
+              )}
+              {(acks ?? []).map((a: any) => (
+                <li key={a.id} className="px-4 py-3 flex items-center gap-3">
+                  <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{a.user?.fullName || a.user?.email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Versão {a.version} · {new Date(a.acknowledgedAt).toLocaleString('pt-BR')}
+                      {a.ip ? ` · IP ${a.ip}` : ''}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {tab === 'permissions' && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+                {(
+                  [
+                    ['isOfficial', 'Documento oficial', 'Marca o arquivo como versão oficial da empresa.'],
+                    ['requiresAcknowledgement', 'Exigir ciência de leitura', 'Solicita confirmação registrada em auditoria.'],
+                    ['allowDownload', 'Permitir download', 'Se desativado, o arquivo é apenas visualizado.'],
+                    ['allowShare', 'Permitir compartilhamento', 'Controla compartilhamento interno e links externos.'],
+                  ] as [string, string, string][]
+                ).map(([key, label, desc]) => (
+                  <label key={key} className="flex items-start gap-3 p-4 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={!!doc[key]}
+                      onChange={(e) => updateMeta.mutate({ [key]: e.target.checked })}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="block text-xs text-muted-foreground">{desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Confidencialidade</div>
+                <select
+                  value={doc.confidentiality}
+                  onChange={(e) => updateMeta.mutate({ confidentiality: e.target.value })}
+                  className="h-10 px-3 rounded-lg border border-input bg-background text-sm w-full sm:w-64"
+                >
+                  <option value="public">Público</option>
+                  <option value="internal">Interno</option>
+                  <option value="confidential">Confidencial</option>
+                  <option value="restricted">Restrito</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  As políticas de documentos aplicadas à pasta podem restringir ainda mais estas opções.
+                </p>
+              </div>
+            </div>
+          )}
+
 
           {tab === 'versions' && (
             <>
@@ -302,6 +453,18 @@ export function DocumentPanel({ documentId, onClose }: Props) {
           )}
 
           {tab === 'shares' && (
+            <>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Compartilhamentos internos</h3>
+              {doc.allowShare && (
+                <button
+                  onClick={() => setShowShare(true)}
+                  className="h-8 px-3 rounded-lg border border-border text-xs inline-flex items-center gap-2 hover:bg-muted"
+                >
+                  <Users2 className="h-3.5 w-3.5" /> Compartilhar com usuário
+                </button>
+              )}
+            </div>
             <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
               {(shares ?? []).length === 0 && (
                 <li className="p-8 text-center text-sm text-muted-foreground">Nenhum compartilhamento interno ainda.</li>
@@ -343,9 +506,18 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                 </li>
               ))}
             </ul>
-          )}
 
-          {tab === 'links' && (
+            <div className="flex items-center justify-between pt-2">
+              <h3 className="font-semibold text-sm">Links externos</h3>
+              {doc.allowShare && (
+                <button
+                  onClick={() => setShowExternal(true)}
+                  className="h-8 px-3 rounded-lg border border-border text-xs inline-flex items-center gap-2 hover:bg-muted"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Criar link externo
+                </button>
+              )}
+            </div>
             <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
               {(links ?? []).length === 0 && (
                 <li className="p-8 text-center text-sm text-muted-foreground">Nenhum link externo criado ainda.</li>
@@ -387,6 +559,7 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                 );
               })}
             </ul>
+            </>
           )}
 
           {tab === 'timeline' && (

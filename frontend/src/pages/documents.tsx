@@ -17,16 +17,27 @@ import {
   Download,
   LayoutGrid,
   List,
-  Info,
   SlidersHorizontal,
   MoreHorizontal,
+  Info,
+  MoreVertical,
+  Pencil,
+  FolderInput,
+  BadgeCheck,
+  Link2,
+  Users2,
+  FileUp,
+  History,
+  Eye,
   HardDrive,
   Settings2,
   ArrowUp,
   Share2,
 } from 'lucide-react';
 import { api, downloadDocument } from '@/lib/api';
-import { DocumentPanel } from '@/components/document-panel';
+import { DocumentPanel, type PanelTab } from '@/components/document-panel';
+import { ShareInternalModal } from '@/components/share-internal-modal';
+import { ShareExternalModal } from '@/components/share-external-modal';
 import { cn } from '@/lib/utils';
 
 type Scope = 'all' | 'shared-with-me' | 'shared-by-me' | 'official' | 'pending-ack' | 'favorites' | 'recent' | 'trash';
@@ -94,6 +105,15 @@ export default function DocumentsPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [moreMenu, setMoreMenu] = useState(false);
+  const [panelTab, setPanelTab] = useState<PanelTab>('overview');
+  const [rowMenu, setRowMenu] = useState<string | null>(null);
+  const [shareInternal, setShareInternal] = useState<any | null>(null);
+  const [shareExternal, setShareExternal] = useState<any | null>(null);
+  const [renameDoc, setRenameDoc] = useState<any | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [moveDoc, setMoveDoc] = useState<any | null>(null);
+  const [versionDoc, setVersionDoc] = useState<any | null>(null);
+  const versionRef = useRef<HTMLInputElement>(null);
   const [uploadMeta, setUploadMeta] = useState({
     isOfficial: false,
     requiresAcknowledgement: false,
@@ -213,6 +233,37 @@ export default function DocumentsPage() {
     mutationFn: async (id: string) => (await api.post(`/documents/${id}/favorite`)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['docs'] }),
   });
+
+  const updateDoc = useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) =>
+      (await api.put(`/documents/${id}`, patch)).data,
+    onSuccess: () => {
+      toast.success('Documento atualizado');
+      qc.invalidateQueries({ queryKey: ['docs'] });
+      qc.invalidateQueries({ queryKey: ['doc'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Falha ao atualizar'),
+  });
+
+  const addVersion = useMutation({
+    mutationFn: async ({ id, file, reason }: { id: string; file: File; reason: string }) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('changeReason', reason);
+      return (await api.post(`/documents/${id}/version`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })).data;
+    },
+    onSuccess: () => {
+      toast.success('Nova versão publicada');
+      setVersionDoc(null);
+      qc.invalidateQueries({ queryKey: ['docs'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Falha ao publicar versão'),
+  });
+
+  const openPanel = (id: string, tab: PanelTab = 'overview') => {
+    setPanelTab(tab);
+    setSelectedId(id);
+  };
 
   const t = stats?.totals;
   const storagePct = Math.min(100, Math.round(((t?.documents ?? 0) / 2000) * 100));
@@ -403,13 +454,6 @@ export default function DocumentsPage() {
               </button>
             </div>
             <button
-              onClick={() => setSelectedId(pageDocs[0]?.id ?? null)}
-              className="h-9 w-9 rounded-lg border border-border inline-flex items-center justify-center text-muted-foreground hover:bg-muted"
-              title="Detalhes"
-            >
-              <Info className="h-4 w-4" />
-            </button>
-            <button
               onClick={() => setShowFilters((v) => !v)}
               className={cn(
                 'h-9 px-3 rounded-lg border border-border inline-flex items-center gap-2 text-sm',
@@ -529,7 +573,7 @@ export default function DocumentsPage() {
                   {pageDocs.map((d: any) => (
                     <button
                       key={d.id}
-                      onClick={() => setSelectedId(d.id)}
+                      onClick={() => openPanel(d.id)}
                       className="rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-primary/[0.02] transition-all"
                     >
                       <div className={`h-9 w-9 rounded-lg ${extTint(d.name)} flex items-center justify-center text-[10px] font-bold`}>
@@ -578,7 +622,7 @@ export default function DocumentsPage() {
                           </tr>
                         ))}
                       {pageDocs.map((d: any) => (
-                        <tr key={d.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setSelectedId(d.id)}>
+                        <tr key={d.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openPanel(d.id)}>
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <div className={`h-7 w-7 rounded ${extTint(d.name)} flex items-center justify-center text-[9px] font-bold shrink-0`}>
@@ -611,36 +655,63 @@ export default function DocumentsPage() {
                               >
                                 <Download className="h-4 w-4 text-muted-foreground" />
                               </button>
-                              <button
-                                title="Favoritar"
-                                onClick={(e) => { e.stopPropagation(); fav.mutate(d.id); }}
-                                className="p-1.5 hover:bg-muted rounded"
-                              >
-                                <Star className={`h-4 w-4 ${d.isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`} />
-                              </button>
-                              <button
-                                title="Compartilhar"
-                                onClick={(e) => { e.stopPropagation(); setSelectedId(d.id); }}
-                                className="p-1.5 hover:bg-muted rounded"
-                              >
-                                <Share2 className="h-4 w-4 text-muted-foreground" />
-                              </button>
-                              {scope === 'trash' ? (
+                              <div className="relative">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); restore.mutate(d.id); }}
-                                  className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+                                  title="Ações"
+                                  onClick={(e) => { e.stopPropagation(); setRowMenu(rowMenu === d.id ? null : d.id); }}
+                                  className="p-1.5 hover:bg-muted rounded"
                                 >
-                                  Restaurar
+                                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
                                 </button>
-                              ) : (
-                                <button
-                                  title="Excluir"
-                                  onClick={(e) => { e.stopPropagation(); del.mutate(d.id); }}
-                                  className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
+                                {rowMenu === d.id && (
+                                  <div
+                                    className="absolute right-0 z-30 mt-1 w-60 rounded-xl border border-border bg-popover shadow-elegant p-1 text-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseLeave={() => setRowMenu(null)}
+                                  >
+                                    {(
+                                      [
+                                        ['Abrir', Eye, () => openPanel(d.id, 'overview')],
+                                        ['Visualizar detalhes', Info, () => openPanel(d.id, 'details')],
+                                        ['Baixar', Download, () => handleDownload(d)],
+                                        ['Compartilhar internamente', Users2, () => setShareInternal(d)],
+                                        ['Criar link externo', Link2, () => setShareExternal(d)],
+                                        ['Enviar nova versão', FileUp, () => { setVersionDoc(d); setTimeout(() => versionRef.current?.click(), 0); }],
+                                        ['Mover', FolderInput, () => setMoveDoc(d)],
+                                        ['Renomear', Pencil, () => { setRenameDoc(d); setRenameValue(d.name); }],
+                                        [d.isOfficial ? 'Remover marca de oficial' : 'Marcar como oficial', BadgeCheck, () => updateDoc.mutate({ id: d.id, patch: { isOfficial: !d.isOfficial } })],
+                                        [d.requiresAcknowledgement ? 'Não exigir ciência' : 'Exigir ciência', ShieldCheck, () => updateDoc.mutate({ id: d.id, patch: { requiresAcknowledgement: !d.requiresAcknowledgement } })],
+                                        ['Ver auditoria', History, () => openPanel(d.id, 'timeline')],
+                                        [d.isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos', Star, () => fav.mutate(d.id)],
+                                      ] as [string, any, () => void][]
+                                    ).map(([label, Icon, action]) => (
+                                      <button
+                                        key={label}
+                                        onClick={() => { setRowMenu(null); action(); }}
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted flex items-center gap-2"
+                                      >
+                                        <Icon className="h-3.5 w-3.5 text-muted-foreground" /> {label}
+                                      </button>
+                                    ))}
+                                    <div className="my-1 h-px bg-border" />
+                                    {scope === 'trash' ? (
+                                      <button
+                                        onClick={() => { setRowMenu(null); restore.mutate(d.id); }}
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted flex items-center gap-2"
+                                      >
+                                        <History className="h-3.5 w-3.5" /> Restaurar
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => { setRowMenu(null); del.mutate(d.id); }}
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-destructive/10 text-destructive flex items-center gap-2"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" /> Enviar para lixeira
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -786,7 +857,96 @@ export default function DocumentsPage() {
         )}
       </div>
 
-      {selectedId && <DocumentPanel documentId={selectedId} onClose={() => setSelectedId(null)} />}
+      <input
+        ref={versionRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f && versionDoc) {
+            addVersion.mutate({ id: versionDoc.id, file: f, reason: 'Nova versão enviada pela Central' });
+          }
+          if (versionRef.current) versionRef.current.value = '';
+        }}
+      />
+
+      {renameDoc && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 space-y-3">
+            <div className="text-sm font-semibold">Renomear documento</div>
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setRenameDoc(null)} className="h-9 px-3 rounded-lg border border-border text-sm">
+                Cancelar
+              </button>
+              <button
+                disabled={!renameValue.trim()}
+                onClick={() => {
+                  updateDoc.mutate({ id: renameDoc.id, patch: { name: renameValue.trim() } });
+                  setRenameDoc(null);
+                }}
+                className="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm disabled:opacity-50"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {moveDoc && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-5 space-y-3">
+            <div className="text-sm font-semibold">Mover documento</div>
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+              <button
+                onClick={() => { updateDoc.mutate({ id: moveDoc.id, patch: { folderId: null } }); setMoveDoc(null); }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Home className="h-4 w-4 text-muted-foreground" /> Raiz
+              </button>
+              {(rootFolders ?? []).map((f: any) => (
+                <button
+                  key={f.id}
+                  onClick={() => { updateDoc.mutate({ id: moveDoc.id, patch: { folderId: f.id } }); setMoveDoc(null); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted flex items-center gap-2"
+                >
+                  <Folder className="h-4 w-4 text-amber-500" /> {f.name}
+                </button>
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <button onClick={() => setMoveDoc(null)} className="h-9 px-3 rounded-lg border border-border text-sm">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {shareInternal && (
+        <ShareInternalModal
+          documentId={shareInternal.id}
+          documentName={shareInternal.name}
+          onClose={() => setShareInternal(null)}
+        />
+      )}
+      {shareExternal && (
+        <ShareExternalModal
+          documentId={shareExternal.id}
+          documentName={shareExternal.name}
+          onClose={() => setShareExternal(null)}
+        />
+      )}
+
+      {selectedId && (
+        <DocumentPanel documentId={selectedId} initialTab={panelTab} onClose={() => setSelectedId(null)} />
+      )}
     </div>
   );
 }
