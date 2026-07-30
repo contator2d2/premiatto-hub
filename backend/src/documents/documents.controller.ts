@@ -4,19 +4,24 @@ import {
   Delete,
   Get,
   Ip,
+  NotFoundException,
   Param,
   Post,
   Put,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { createReadStream, existsSync } from 'fs';
+import { basename, extname, join } from 'path';
 import { AppRole, SharePriority } from '@prisma/client';
 import { DocumentsService } from './documents.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+
 
 @Controller()
 export class DocumentsController {
