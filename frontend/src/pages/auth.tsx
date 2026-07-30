@@ -111,14 +111,14 @@ export default function AuthPage() {
           <div className="lg:hidden flex items-center gap-3">
             <BrandLogo
               src={branding?.logoUrl}
-              className="h-10 w-10 rounded-xl object-cover"
+              className={hasLogo ? 'h-12 w-auto max-w-[200px] object-contain' : 'h-10 w-10 rounded-xl object-cover'}
               fallback={
                 <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-primary-foreground" />
                 </div>
               }
             />
-            <span className="text-lg font-semibold">{appName}</span>
+            {!hasLogo && <span className="text-lg font-semibold">{appName}</span>}
           </div>
 
           <div className="space-y-2">
