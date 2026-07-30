@@ -64,19 +64,48 @@ api.interceptors.response.use(
 
 /** Baixa um documento em 1 clique (streaming autenticado + nome amigável). */
 export async function downloadDocument(id: string, name?: string) {
-  const res = await api.get(`/documents/${id}/file`, {
-    params: { download: 1 },
-    responseType: 'blob',
-  });
+  let res;
+  try {
+    res = await api.get(`/documents/${id}/file`, {
+      params: { download: 1 },
+      responseType: 'blob',
+    });
+  } catch (e: any) {
+    // erros vêm como Blob por causa do responseType: extrai a mensagem real
+    let message = 'Falha no download';
+    const blob = e?.response?.data;
+    if (blob instanceof Blob) {
+      try {
+        const text = await blob.text();
+        const parsed = JSON.parse(text);
+        if (parsed?.message) message = String(parsed.message);
+      } catch {
+        /* mantém mensagem padrão */
+      }
+    }
+    throw new Error(message);
+  }
+
+  const blob = res.data as Blob;
+  if (!blob || blob.size === 0) throw new Error('Arquivo vazio ou indisponível');
+
   const disposition = String(res.headers?.['content-disposition'] || '');
-  const match = /filename\*=UTF-8''([^;]+)/.exec(disposition);
-  const fileName = match ? decodeURIComponent(match[1]) : name || 'documento';
-  const url = URL.createObjectURL(res.data as Blob);
+  const utf8 = /filename\*=UTF-8''([^;]+)/.exec(disposition);
+  const plain = /filename="([^"]+)"/.exec(disposition);
+  const fileName = utf8
+    ? decodeURIComponent(utf8[1])
+    : plain
+      ? plain[1]
+      : name || 'documento';
+
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+

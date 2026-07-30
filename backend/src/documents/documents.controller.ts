@@ -15,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { createReadStream, existsSync } from 'fs';
+import { createReadStream, existsSync, statSync } from 'fs';
 import { basename, extname, join } from 'path';
 import { AppRole, SharePriority } from '@prisma/client';
 import { DocumentsService } from './documents.service';
@@ -141,21 +141,62 @@ export class DocumentsController {
   ) {
     const doc: any = await this.docs.get(userId, id);
     const wantsDownload = dl === '1' || dl === 'true';
-    if (wantsDownload) await this.docs.recordDownload(userId, id);
+
     const root = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
-    const rel = String(doc.filePath || '').replace(/^\/api\/files\//, '');
-    const abs = join(root, 'documents', basename(rel));
-    if (!existsSync(abs)) throw new NotFoundException('Arquivo não encontrado');
+    const rel = String(doc.filePath || '')
+      .replace(/^https?:\/\/[^/]+/, '')
+      .replace(/^\/?api\/files\/?/, '');
+    const base = basename(rel);
+
+    // procura o arquivo em todos os locais possíveis (uploads antigos/novos, versões)
+    const candidates = [
+      join(root, rel),
+      join(root, 'documents', base),
+      join(root, 'versions', base),
+      join(root, base),
+      rel,
+    ].filter(Boolean);
+    const abs = candidates.find((c) => {
+      try {
+        return existsSync(c) && statSync(c).isFile();
+      } catch {
+        return false;
+      }
+    });
+
+    if (!abs) {
+      throw new NotFoundException(
+        'O arquivo físico deste documento não foi encontrado no servidor. Faça o upload de uma nova versão.',
+      );
+    }
+
+    if (wantsDownload) {
+      try {
+        await this.docs.recordDownload(userId, id);
+      } catch {
+        /* auditoria não deve impedir o download */
+      }
+    }
+
     const ext = (doc.fileType ? `.${doc.fileType}` : extname(abs)) || '';
     const safeName = String(doc.name || 'documento').replace(/[\r\n"]/g, '');
     const fileName = safeName.toLowerCase().endsWith(ext.toLowerCase()) ? safeName : `${safeName}${ext}`;
     res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader('Content-Length', String(statSync(abs).size));
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader(
       'Content-Disposition',
       `${wantsDownload ? 'attachment' : 'inline'}; filename="${fileName.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     );
-    createReadStream(abs).pipe(res);
+
+    const stream = createReadStream(abs);
+    stream.on('error', () => {
+      if (!res.headersSent) res.status(500);
+      res.end();
+    });
+    stream.pipe(res);
   }
+
 
 
   @Post('documents/:id/acknowledge')

@@ -31,6 +31,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { useBranding } from '@/contexts/branding-context';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from '@/components/brand-logo';
 import { MODULES } from '@/lib/modules';
 import { NotificationsBell } from './notifications-bell';
 
@@ -268,13 +269,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
             expanded ? 'px-5' : 'px-0 justify-center',
           )}
         >
-          {branding?.logoUrl ? (
-            <img src={branding.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0" />
-          ) : (
-            <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center text-primary-foreground font-display font-bold text-lg shadow-elegant shrink-0">
-              P
-            </div>
-          )}
+          <BrandLogo
+            src={branding?.logoUrl}
+            className="h-10 w-10 rounded-xl object-cover shrink-0"
+            fallback={
+              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center text-primary-foreground font-display font-bold text-lg shadow-elegant shrink-0">
+                P
+              </div>
+            }
+          />
           {expanded && (
             <>
               <div className="flex flex-col leading-tight min-w-0 flex-1">

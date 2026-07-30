@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Building2, Loader2, ShieldCheck, Sparkles, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { BrandLogo } from '@/components/brand-logo';
 import { useBranding } from '@/contexts/branding-context';
 
 export default function AuthPage() {
@@ -48,13 +49,15 @@ export default function AuthPage() {
         <div className="pointer-events-none absolute -bottom-32 -left-24 h-[22rem] w-[22rem] rounded-full bg-white/10 blur-3xl" />
 
         <div className="relative z-10 flex items-center gap-3">
-          {branding?.logoUrl ? (
-            <img src={branding.logoUrl} alt="" className="h-11 w-11 rounded-2xl object-cover ring-1 ring-white/20" />
-          ) : (
-            <div className="h-11 w-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
-              <Building2 className="h-5 w-5" />
-            </div>
-          )}
+          <BrandLogo
+            src={branding?.logoUrl}
+            className="h-11 w-11 rounded-2xl object-cover ring-1 ring-white/20"
+            fallback={
+              <div className="h-11 w-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
+                <Building2 className="h-5 w-5" />
+              </div>
+            }
+          />
           <div className="flex flex-col leading-tight">
             <span className="text-base font-semibold tracking-tight">{appName}</span>
             <span className="text-xs text-primary-foreground/70">Plataforma corporativa</span>
@@ -97,13 +100,15 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-6 sm:p-12">
         <div className="w-full max-w-sm space-y-8">
           <div className="lg:hidden flex items-center gap-3">
-            {branding?.logoUrl ? (
-              <img src={branding.logoUrl} alt="" className="h-10 w-10 rounded-xl object-cover" />
-            ) : (
-              <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-primary-foreground" />
-              </div>
-            )}
+            <BrandLogo
+              src={branding?.logoUrl}
+              className="h-10 w-10 rounded-xl object-cover"
+              fallback={
+                <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary-foreground" />
+                </div>
+              }
+            />
             <span className="text-lg font-semibold">{appName}</span>
           </div>
 

@@ -358,7 +358,7 @@ export default function DocumentsPage() {
                     onClick={async (e) => {
                       e.stopPropagation();
                       if (!d.allowDownload) { toast.error('Download não permitido para este documento'); return; }
-                      try { await downloadDocument(d.id, d.name); } catch { toast.error('Falha no download'); }
+                      try { await downloadDocument(d.id, d.name); } catch (err: any) { toast.error(err?.message || 'Falha no download'); }
                     }}
                     className="p-1.5 hover:bg-muted rounded"
                   >
