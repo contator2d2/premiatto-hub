@@ -11,7 +11,7 @@ import {
   Store,
   Target,
   BarChart3,
-  Sparkles,
+  Brain,
   ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
@@ -161,7 +161,7 @@ export const MODULES: PlatformModule[] = [
     to: '/ai',
     label: 'Inteligência Artificial',
     description: 'Assistente Premiatto — respostas, busca inteligente e apoio operacional.',
-    icon: Sparkles,
+    icon: Brain,
     group: 'inteligencia',
     status: 'coming_soon',
   },

@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Power,
   PowerOff,
-  Sparkles,
+  Share2,
   FileWarning,
   History,
   AlertTriangle,
@@ -209,7 +209,7 @@ export default function PoliciesPage() {
       <nav className="flex gap-1 border-b border-border">
         {[
           { k: 'policies', label: 'Políticas', icon: ShieldCheck },
-          { k: 'presets', label: 'Presets de compartilhamento', icon: Sparkles },
+          { k: 'presets', label: 'Presets de compartilhamento', icon: Share2 },
           { k: 'exceptions', label: 'Exceções', icon: ShieldAlert },
           { k: 'reports', label: 'Relatórios', icon: FileWarning },
           { k: 'audit', label: 'Auditoria', icon: History },

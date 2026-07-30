@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Building2, Loader2, ShieldCheck, Sparkles, Lock } from 'lucide-react';
+import { Building2, Loader2, ShieldCheck, Lock, Monitor } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { BrandLogo } from '@/components/brand-logo';
 import { useBranding } from '@/contexts/branding-context';
@@ -75,7 +75,7 @@ export default function AuthPage() {
 
         <div className="relative z-10 space-y-8 max-w-lg">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs font-medium ring-1 ring-white/15">
-            <Sparkles className="h-3.5 w-3.5" /> Acesso restrito a colaboradores
+            <Lock className="h-3.5 w-3.5" /> Acesso restrito a colaboradores
           </div>
           <h1 className="text-[2.75rem] font-semibold leading-[1.05] tracking-tight font-display">
             {branding?.tagline || 'Um só lugar para documentos, pessoas e conhecimento.'}
@@ -88,7 +88,7 @@ export default function AuthPage() {
             {[
               { icon: ShieldCheck, text: 'Segurança corporativa com RBAC e auditoria completa' },
               { icon: Lock, text: 'Documentos criptografados e rastreamento de acesso' },
-              { icon: Sparkles, text: 'Experiência premium inspirada em Linear e Notion' },
+              { icon: Monitor, text: 'Experiência premium inspirada em Linear e Notion' },
             ].map((f) => (
               <li key={f.text} className="flex items-start gap-3 text-sm text-primary-foreground/90">
                 <div className="mt-0.5 h-6 w-6 rounded-md bg-white/15 flex items-center justify-center ring-1 ring-white/15">
