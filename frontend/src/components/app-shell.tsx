@@ -34,6 +34,8 @@ import { cn } from '@/lib/utils';
 import { BrandLogo } from '@/components/brand-logo';
 import { MODULES } from '@/lib/modules';
 import { NotificationsBell } from './notifications-bell';
+import { HelpButton } from './help-button';
+import { useQuery } from '@tanstack/react-query';
 
 const documentNav = [
   { label: 'Central de Documentos', to: '/documents', icon: FolderOpen, exact: true },
@@ -170,6 +172,14 @@ function AccordionGroup({
 export default function AppShell({ children }: { children: ReactNode }) {
   const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { branding } = useBranding();
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard', 'stats', 'sidebar'],
+    queryFn: async () => (await api.get('/dashboard/stats')).data as { totals?: { pendingAcksMine?: number } },
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+    retry: false,
+  });
+  const pendingAcks = stats?.totals?.pendingAcksMine ?? 0;
   const [userMenu, setUserMenu] = useState(false);
   const [pwdModal, setPwdModal] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -330,9 +340,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 expanded={expanded}
                 onNavigate={closeMobile}
                 badge={
-                  n.badge ? (
+                  n.badge && pendingAcks > 0 ? (
                     <span className="text-[10px] font-semibold bg-primary text-primary-foreground rounded-md min-w-[20px] h-5 px-1.5 flex items-center justify-center shrink-0">
-                      12
+                      {pendingAcks > 99 ? '99+' : pendingAcks}
                     </span>
                   ) : undefined
                 }
@@ -509,6 +519,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           >
             <Search className="h-4 w-4" />
           </button>
+          <HelpButton />
           <NotificationsBell />
           <button
             className="hidden sm:flex h-9 w-9 shrink-0 rounded-lg border border-border bg-card hover:bg-muted items-center justify-center text-muted-foreground"
