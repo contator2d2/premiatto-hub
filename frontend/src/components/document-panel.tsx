@@ -558,6 +558,7 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                 );
               })}
             </ul>
+            </>
           )}
 
           {tab === 'timeline' && (
