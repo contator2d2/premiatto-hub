@@ -217,6 +217,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [inDocs, inAdmin]);
 
   const appName = branding?.appName || 'Premiatto';
+  const hasLogo = !!(branding?.logoUrl && String(branding.logoUrl).trim());
+
   const initials = (user?.fullName || user?.email || '?')
     .split(' ')
     .map((s) => s[0])
