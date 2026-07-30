@@ -26,7 +26,7 @@ import { useAuth } from '@/contexts/auth-context';
 
 type Props = { documentId: string; onClose: () => void };
 
-type Tab = 'overview' | 'versions' | 'shares' | 'links' | 'timeline';
+type Tab = 'overview' | 'details' | 'versions' | 'shares' | 'acks' | 'timeline' | 'permissions';
 
 export function DocumentPanel({ documentId, onClose }: Props) {
   const qc = useQueryClient();
@@ -34,6 +34,7 @@ export function DocumentPanel({ documentId, onClose }: Props) {
   const [tab, setTab] = useState<Tab>('overview');
   const [showShare, setShowShare] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
+  const [shareChooser, setShareChooser] = useState(false);
   const versionInputRef = useRef<HTMLInputElement>(null);
 
   const { data: doc, isLoading } = useQuery({
