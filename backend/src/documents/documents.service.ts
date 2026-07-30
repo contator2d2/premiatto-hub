@@ -356,6 +356,17 @@ export class DocumentsService {
     return doc;
   }
 
+  // ---- Confirmações de leitura ----
+
+  async acknowledgements(id: string) {
+    return this.prisma.documentAcknowledgement.findMany({
+      where: { documentId: id },
+      include: { user: { select: { id: true, fullName: true, email: true } } },
+      orderBy: { acknowledgedAt: 'desc' },
+      take: 500,
+    });
+  }
+
   // ---- Timeline / eventos ----
 
   async timeline(id: string) {
