@@ -452,6 +452,18 @@ export function DocumentPanel({ documentId, onClose }: Props) {
           )}
 
           {tab === 'shares' && (
+            <>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Compartilhamentos internos</h3>
+              {doc.allowShare && (
+                <button
+                  onClick={() => setShowShare(true)}
+                  className="h-8 px-3 rounded-lg border border-border text-xs inline-flex items-center gap-2 hover:bg-muted"
+                >
+                  <Users2 className="h-3.5 w-3.5" /> Compartilhar com usuário
+                </button>
+              )}
+            </div>
             <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
               {(shares ?? []).length === 0 && (
                 <li className="p-8 text-center text-sm text-muted-foreground">Nenhum compartilhamento interno ainda.</li>
