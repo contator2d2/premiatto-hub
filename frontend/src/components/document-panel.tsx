@@ -17,7 +17,7 @@ import {
   Users2,
   Trash2,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, downloadDocument } from '@/lib/api';
 import { FileViewer } from './file-viewer';
 import { ShareInternalModal } from './share-internal-modal';
 import { ShareExternalModal } from './share-external-modal';
@@ -121,8 +121,11 @@ export function DocumentPanel({ documentId, onClose }: Props) {
       toast.error('Download não permitido para este documento');
       return;
     }
-    await api.post(`/documents/${documentId}/download`).catch(() => {});
-    window.open(doc.filePath, '_blank');
+    try {
+      await downloadDocument(documentId, doc.name);
+    } catch {
+      toast.error('Falha no download');
+    }
   }
 
   if (isLoading || !doc)
