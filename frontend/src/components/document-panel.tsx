@@ -24,14 +24,15 @@ import { ShareExternalModal } from './share-external-modal';
 import { ShareStatus } from './share-status';
 import { useAuth } from '@/contexts/auth-context';
 
-type Props = { documentId: string; onClose: () => void };
+type Props = { documentId: string; onClose: () => void; initialTab?: Tab };
 
+export type PanelTab = 'overview' | 'details' | 'versions' | 'shares' | 'acks' | 'timeline' | 'permissions';
 type Tab = 'overview' | 'details' | 'versions' | 'shares' | 'acks' | 'timeline' | 'permissions';
 
-export function DocumentPanel({ documentId, onClose }: Props) {
+export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'overview');
   const [showShare, setShowShare] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
   const [shareChooser, setShareChooser] = useState(false);
