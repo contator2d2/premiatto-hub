@@ -278,7 +278,28 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                   </button>
                 </div>
               )}
+            </>
+          )}
+
+          {tab === 'details' && (
+            <>
               <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Pasta</div>
+                  <div>{doc.folder?.name || 'Raiz'}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Versão vigente</div>
+                  <div>v{doc.version}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Criado por</div>
+                  <div>{doc.creator?.fullName || doc.creator?.email || '—'}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4 space-y-1">
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Última atualização</div>
+                  <div>{new Date(doc.updatedAt).toLocaleString('pt-BR')}</div>
+                </div>
                 <div className="rounded-lg border border-border bg-card p-4 space-y-1">
                   <div className="text-xs uppercase tracking-wider text-muted-foreground">Publicação</div>
                   <div>{doc.publishedAt ? new Date(doc.publishedAt).toLocaleString('pt-BR') : '—'}</div>
@@ -296,8 +317,88 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                   <div>{doc.viewCount} visualizações · {doc.downloadCount} downloads</div>
                 </div>
               </div>
+              <div className="rounded-lg border border-border bg-card p-4 text-sm space-y-1">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Descrição</div>
+                <div>{doc.description || 'Sem descrição'}</div>
+              </div>
+              {(doc.tags ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {doc.tags.map((tg: string) => (
+                    <span key={tg} className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                      #{tg}
+                    </span>
+                  ))}
+                </div>
+              )}
             </>
           )}
+
+          {tab === 'acks' && (
+            <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
+              {(acks ?? []).length === 0 && (
+                <li className="p-8 text-center text-sm text-muted-foreground">
+                  Nenhuma confirmação de leitura registrada.
+                </li>
+              )}
+              {(acks ?? []).map((a: any) => (
+                <li key={a.id} className="px-4 py-3 flex items-center gap-3">
+                  <BadgeCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{a.user?.fullName || a.user?.email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Versão {a.version} · {new Date(a.acknowledgedAt).toLocaleString('pt-BR')}
+                      {a.ip ? ` · IP ${a.ip}` : ''}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {tab === 'permissions' && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card divide-y divide-border">
+                {(
+                  [
+                    ['isOfficial', 'Documento oficial', 'Marca o arquivo como versão oficial da empresa.'],
+                    ['requiresAcknowledgement', 'Exigir ciência de leitura', 'Solicita confirmação registrada em auditoria.'],
+                    ['allowDownload', 'Permitir download', 'Se desativado, o arquivo é apenas visualizado.'],
+                    ['allowShare', 'Permitir compartilhamento', 'Controla compartilhamento interno e links externos.'],
+                  ] as [string, string, string][]
+                ).map(([key, label, desc]) => (
+                  <label key={key} className="flex items-start gap-3 p-4 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={!!doc[key]}
+                      onChange={(e) => updateMeta.mutate({ [key]: e.target.checked })}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">{label}</span>
+                      <span className="block text-xs text-muted-foreground">{desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Confidencialidade</div>
+                <select
+                  value={doc.confidentiality}
+                  onChange={(e) => updateMeta.mutate({ confidentiality: e.target.value })}
+                  className="h-10 px-3 rounded-lg border border-input bg-background text-sm w-full sm:w-64"
+                >
+                  <option value="public">Público</option>
+                  <option value="internal">Interno</option>
+                  <option value="confidential">Confidencial</option>
+                  <option value="restricted">Restrito</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  As políticas de documentos aplicadas à pasta podem restringir ainda mais estas opções.
+                </p>
+              </div>
+            </div>
+          )}
+
 
           {tab === 'versions' && (
             <>
