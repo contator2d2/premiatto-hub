@@ -505,9 +505,18 @@ export function DocumentPanel({ documentId, onClose }: Props) {
                 </li>
               ))}
             </ul>
-          )}
 
-          {tab === 'links' && (
+            <div className="flex items-center justify-between pt-2">
+              <h3 className="font-semibold text-sm">Links externos</h3>
+              {doc.allowShare && (
+                <button
+                  onClick={() => setShowExternal(true)}
+                  className="h-8 px-3 rounded-lg border border-border text-xs inline-flex items-center gap-2 hover:bg-muted"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" /> Criar link externo
+                </button>
+              )}
+            </div>
             <ul className="divide-y divide-border rounded-xl border border-border bg-card overflow-hidden">
               {(links ?? []).length === 0 && (
                 <li className="p-8 text-center text-sm text-muted-foreground">Nenhum link externo criado ainda.</li>
