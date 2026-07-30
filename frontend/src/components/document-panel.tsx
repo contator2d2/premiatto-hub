@@ -58,8 +58,25 @@ export function DocumentPanel({ documentId, onClose }: Props) {
   const { data: links } = useQuery({
     queryKey: ['doc-public-links', documentId],
     queryFn: async () => (await api.get(`/public-links?documentId=${documentId}`)).data as any[],
-    enabled: tab === 'links',
+    enabled: tab === 'shares',
   });
+  const { data: acks } = useQuery({
+    queryKey: ['doc-acks', documentId],
+    queryFn: async () => (await api.get(`/documents/${documentId}/acknowledgements`)).data as any[],
+    enabled: tab === 'acks',
+  });
+
+  const updateMeta = useMutation({
+    mutationFn: async (patch: Record<string, any>) => (await api.put(`/documents/${documentId}`, patch)).data,
+    onSuccess: () => {
+      toast.success('Documento atualizado');
+      qc.invalidateQueries({ queryKey: ['doc', documentId] });
+      qc.invalidateQueries({ queryKey: ['docs'] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Falha ao atualizar'),
+  });
+
+
 
   const ack = useMutation({
     mutationFn: async () => (await api.post(`/documents/${documentId}/acknowledge`)).data,
