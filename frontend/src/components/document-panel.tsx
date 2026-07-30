@@ -123,8 +123,8 @@ export function DocumentPanel({ documentId, onClose }: Props) {
     }
     try {
       await downloadDocument(documentId, doc.name);
-    } catch {
-      toast.error('Falha no download');
+    } catch (err: any) {
+      toast.error(err?.message || 'Falha no download');
     }
   }
 

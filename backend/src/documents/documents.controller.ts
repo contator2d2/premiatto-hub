@@ -15,7 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { createReadStream, existsSync } from 'fs';
+import { createReadStream, existsSync, statSync } from 'fs';
 import { basename, extname, join } from 'path';
 import { AppRole, SharePriority } from '@prisma/client';
 import { DocumentsService } from './documents.service';
