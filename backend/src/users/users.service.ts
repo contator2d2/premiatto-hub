@@ -53,7 +53,21 @@ export class UsersService {
     return this.get(id);
   }
 
+  async resetPassword(id: string, password: string) {
+    if (!password || password.length < 6) throw new BadRequestException('Senha deve ter ao menos 6 caracteres');
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException();
+    const passwordHash = await bcrypt.hash(password, 10);
+    await this.prisma.user.update({ where: { id }, data: { passwordHash } });
+    await this.prisma.refreshToken.updateMany({
+      where: { userId: id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+    return { ok: true };
+  }
+
   async setRoles(id: string, roles: AppRole[]) {
+
     await this.prisma.userRole.deleteMany({ where: { userId: id } });
     if (roles.length) {
       await this.prisma.userRole.createMany({

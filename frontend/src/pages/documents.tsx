@@ -17,8 +17,9 @@ import {
   Link2,
   Bell,
   ChevronRight,
+  Download,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, downloadDocument } from '@/lib/api';
 import { DocumentPanel } from '@/components/document-panel';
 import { cn } from '@/lib/utils';
 
@@ -352,6 +353,17 @@ export default function DocumentsPage() {
                       {d.description || '—'} · {new Date(d.updatedAt).toLocaleDateString('pt-BR')} · {d._count?.versions ?? 1} versões · {d._count?.shares ?? 0} compartilhamentos
                     </div>
                   </div>
+                  <button
+                    title="Baixar"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!d.allowDownload) { toast.error('Download não permitido para este documento'); return; }
+                      try { await downloadDocument(d.id, d.name); } catch { toast.error('Falha no download'); }
+                    }}
+                    className="p-1.5 hover:bg-muted rounded"
+                  >
+                    <Download className="h-4 w-4 text-muted-foreground" />
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); fav.mutate(d.id); }}
                     className="p-1.5 hover:bg-muted rounded"

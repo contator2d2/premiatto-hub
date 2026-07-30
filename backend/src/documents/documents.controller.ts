@@ -4,19 +4,24 @@ import {
   Delete,
   Get,
   Ip,
+  NotFoundException,
   Param,
   Post,
   Put,
   Query,
   Req,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { createReadStream, existsSync } from 'fs';
+import { basename, extname, join } from 'path';
 import { AppRole, SharePriority } from '@prisma/client';
 import { DocumentsService } from './documents.service';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
+
 
 @Controller()
 export class DocumentsController {
@@ -125,6 +130,33 @@ export class DocumentsController {
   download(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.docs.recordDownload(userId, id);
   }
+
+  // Stream do arquivo com nome amigável (download em 1 clique)
+  @Get('documents/:id/file')
+  async file(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Query('download') dl: string,
+    @Res() res: any,
+  ) {
+    const doc: any = await this.docs.get(userId, id);
+    const wantsDownload = dl === '1' || dl === 'true';
+    if (wantsDownload) await this.docs.recordDownload(userId, id);
+    const root = process.env.UPLOADS_DIR || join(process.cwd(), 'uploads');
+    const rel = String(doc.filePath || '').replace(/^\/api\/files\//, '');
+    const abs = join(root, 'documents', basename(rel));
+    if (!existsSync(abs)) throw new NotFoundException('Arquivo não encontrado');
+    const ext = (doc.fileType ? `.${doc.fileType}` : extname(abs)) || '';
+    const safeName = String(doc.name || 'documento').replace(/[\r\n"]/g, '');
+    const fileName = safeName.toLowerCase().endsWith(ext.toLowerCase()) ? safeName : `${safeName}${ext}`;
+    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `${wantsDownload ? 'attachment' : 'inline'}; filename="${fileName.replace(/[^\x20-\x7e]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
+    createReadStream(abs).pipe(res);
+  }
+
 
   @Post('documents/:id/acknowledge')
   ack(@CurrentUser('id') userId: string, @Param('id') id: string, @Ip() ip: string, @Req() req: any) {

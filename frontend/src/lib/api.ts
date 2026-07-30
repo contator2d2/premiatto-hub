@@ -61,3 +61,22 @@ api.interceptors.response.use(
     throw error;
   },
 );
+
+/** Baixa um documento em 1 clique (streaming autenticado + nome amigável). */
+export async function downloadDocument(id: string, name?: string) {
+  const res = await api.get(`/documents/${id}/file`, {
+    params: { download: 1 },
+    responseType: 'blob',
+  });
+  const disposition = String(res.headers?.['content-disposition'] || '');
+  const match = /filename\*=UTF-8''([^;]+)/.exec(disposition);
+  const fileName = match ? decodeURIComponent(match[1]) : name || 'documento';
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
