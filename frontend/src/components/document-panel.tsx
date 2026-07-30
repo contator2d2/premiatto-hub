@@ -182,34 +182,64 @@ export function DocumentPanel({ documentId, onClose }: Props) {
             </button>
           )}
           {doc.allowShare && (
-            <>
-              <button onClick={() => setShowShare(true)} className="h-9 px-3 rounded-lg border border-border text-sm inline-flex items-center gap-2">
-                <Share2 className="h-4 w-4" /> Interno
+            <div className="relative">
+              <button
+                onClick={() => setShareChooser((v) => !v)}
+                className="h-9 px-3 rounded-lg gradient-brand text-primary-foreground text-sm inline-flex items-center gap-2"
+              >
+                <Share2 className="h-4 w-4" /> Compartilhar
               </button>
-              <button onClick={() => setShowExternal(true)} className="h-9 px-3 rounded-lg gradient-brand text-primary-foreground text-sm inline-flex items-center gap-2">
-                <Link2 className="h-4 w-4" /> Externo
-              </button>
-            </>
+              {shareChooser && (
+                <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-popover shadow-elegant p-2 z-30 text-left">
+                  <button
+                    onClick={() => { setShareChooser(false); setShowShare(true); }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted flex gap-3"
+                  >
+                    <Users2 className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>
+                      <span className="block text-sm font-medium">Compartilhar com usuário da plataforma</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Usuário, perfil, departamento ou todos.
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => { setShareChooser(false); setShowExternal(true); }}
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted flex gap-3"
+                  >
+                    <ExternalLink className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>
+                      <span className="block text-sm font-medium">Compartilhar com pessoa externa</span>
+                      <span className="block text-xs text-muted-foreground">
+                        Link com token, senha, validade, limite de acesso e ciência.
+                      </span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <button onClick={onClose} className="p-2 rounded hover:bg-muted">
             <X className="h-4 w-4" />
           </button>
         </header>
 
-        <div className="border-b border-border px-5 flex gap-4 text-sm">
+        <div className="border-b border-border px-5 flex gap-4 text-sm overflow-x-auto">
           {(
             [
-              ['overview', 'Visão', Info],
+              ['overview', 'Visualização', Info],
+              ['details', 'Detalhes', Info],
               ['versions', 'Versões', History],
               ['shares', 'Compartilhamentos', Users2],
-              ['links', 'Links externos', Link2],
+              ['acks', 'Confirmações de leitura', BadgeCheck],
               ['timeline', 'Histórico', MessageSquare],
+              ['permissions', 'Permissões', ShieldCheck],
             ] as [Tab, string, any][]
           ).map(([k, label, Icon]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`py-3 border-b-2 -mb-px inline-flex items-center gap-1.5 ${
+              className={`py-3 border-b-2 -mb-px inline-flex items-center gap-1.5 whitespace-nowrap ${
                 tab === k ? 'border-primary text-primary font-medium' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -217,6 +247,7 @@ export function DocumentPanel({ documentId, onClose }: Props) {
             </button>
           ))}
         </div>
+
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {tab === 'overview' && (
