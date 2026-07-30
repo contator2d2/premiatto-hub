@@ -1,5 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { assetUrl } from '@/lib/api';
 
 type Props = {
   /** URL do logo vindo do branding (pode ser inválida/quebrada) */
@@ -21,11 +22,12 @@ export function BrandLogo({ src, className, fallback }: Props) {
     setFailed(false);
   }, [src]);
 
-  if (!src || failed) return <>{fallback}</>;
+  const resolved = assetUrl(src);
+  if (!resolved || failed) return <>{fallback}</>;
 
   return (
     <img
-      src={src}
+      src={resolved}
       alt=""
       className={cn(className)}
       onError={() => setFailed(true)}
