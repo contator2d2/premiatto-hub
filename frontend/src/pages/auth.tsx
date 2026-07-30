@@ -31,6 +31,8 @@ export default function AuthPage() {
   }
 
   const appName = branding?.appName || 'Premiatto Connect';
+  const hasLogo = !!(branding?.logoUrl && String(branding.logoUrl).trim());
+
 
   return (
     <div className="min-h-screen w-full grid lg:grid-cols-[1.1fr_1fr] bg-background">
