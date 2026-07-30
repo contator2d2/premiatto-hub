@@ -53,18 +53,25 @@ export default function AuthPage() {
         <div className="relative z-10 flex items-center gap-3">
           <BrandLogo
             src={branding?.logoUrl}
-            className="h-11 w-11 rounded-2xl object-cover ring-1 ring-white/20"
+            className={
+              hasLogo
+                ? 'h-14 w-auto max-w-[220px] object-contain'
+                : 'h-11 w-11 rounded-2xl object-cover ring-1 ring-white/20'
+            }
             fallback={
               <div className="h-11 w-11 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
                 <Building2 className="h-5 w-5" />
               </div>
             }
           />
-          <div className="flex flex-col leading-tight">
-            <span className="text-base font-semibold tracking-tight">{appName}</span>
-            <span className="text-xs text-primary-foreground/70">Plataforma corporativa</span>
-          </div>
+          {!hasLogo && (
+            <div className="flex flex-col leading-tight">
+              <span className="text-base font-semibold tracking-tight">{appName}</span>
+              <span className="text-xs text-primary-foreground/70">Plataforma corporativa</span>
+            </div>
+          )}
         </div>
+
 
         <div className="relative z-10 space-y-8 max-w-lg">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur px-3 py-1 text-xs font-medium ring-1 ring-white/15">
