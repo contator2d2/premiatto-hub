@@ -24,7 +24,7 @@ export function ShareStatus({ status, deliveredAt, viewedAt, openedAt, acknowled
       : status === 'opened'
         ? 'Documento aberto'
         : status === 'viewed'
-          ? 'Visualizado'
+          ? 'Notificação visualizada'
           : 'Entregue';
 
   const tooltip = [
