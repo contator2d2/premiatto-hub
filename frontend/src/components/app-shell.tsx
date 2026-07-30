@@ -217,6 +217,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [inDocs, inAdmin]);
 
   const appName = branding?.appName || 'Premiatto';
+  const hasLogo = !!(branding?.logoUrl && String(branding.logoUrl).trim());
+
   const initials = (user?.fullName || user?.email || '?')
     .split(' ')
     .map((s) => s[0])
@@ -281,7 +283,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
         >
           <BrandLogo
             src={branding?.logoUrl}
-            className="h-10 w-10 rounded-xl object-cover shrink-0"
+            className={cn(
+              'object-contain shrink-0',
+              hasLogo && expanded ? 'h-12 w-auto max-w-[170px]' : 'h-10 w-10 rounded-xl',
+            )}
             fallback={
               <div className="h-10 w-10 rounded-xl gradient-brand flex items-center justify-center text-primary-foreground font-display font-bold text-lg shadow-elegant shrink-0">
                 P
@@ -290,10 +295,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
           />
           {expanded && (
             <>
-              <div className="flex flex-col leading-tight min-w-0 flex-1">
-                <span className="font-display font-bold text-[15px] tracking-tight truncate">{appName}</span>
-                <span className="text-[9px] uppercase tracking-[0.22em] text-sidebar-muted">Connect</span>
-              </div>
+              {hasLogo ? (
+                <div className="flex-1" />
+              ) : (
+                <div className="flex flex-col leading-tight min-w-0 flex-1">
+                  <span className="font-display font-bold text-[15px] tracking-tight truncate">{appName}</span>
+                  <span className="text-[9px] uppercase tracking-[0.22em] text-sidebar-muted">Connect</span>
+                </div>
+              )}
               <button
                 onClick={() => setPinned((v) => !v)}
                 title={pinned ? 'Desafixar menu' : 'Fixar menu aberto'}
