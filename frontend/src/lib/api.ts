@@ -109,3 +109,29 @@ export async function downloadDocument(id: string, name?: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+
+/**
+ * Resolve uma URL de arquivo servido pelo backend (`/api/files/...`) para a
+ * origem correta da API. Sem isso, o navegador procura o arquivo no host do
+ * frontend (nginx) e o logo/favicon aparecem quebrados.
+ */
+export function assetUrl(path?: string | null): string | undefined {
+  if (!path) return undefined;
+  const p = String(path).trim();
+  if (!p) return undefined;
+  if (/^(https?:|data:|blob:)/i.test(p)) return p;
+
+  const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+  const rel = p.startsWith('/') ? p : `/${p}`;
+
+  // base absoluta (ex.: https://api.exemplo.com/api) -> usa apenas a origem
+  if (/^https?:\/\//i.test(base)) {
+    try {
+      const origin = new URL(base).origin;
+      return `${origin}${rel}`;
+    } catch {
+      return rel;
+    }
+  }
+  return rel;
+}
