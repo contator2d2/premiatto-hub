@@ -836,24 +836,48 @@ export default function DocumentsPage() {
                 </label>
               </div>
             </div>
-            <label className="flex items-center justify-center gap-3 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer text-sm text-muted-foreground">
-              <Upload className="h-5 w-5" />
-              <span>Selecionar arquivo para upload</span>
-              <input
-                ref={uploadRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) upload.mutate(f);
-                  if (uploadRef.current) uploadRef.current.value = '';
-                }}
-              />
-            </label>
-            <div className="flex justify-end">
-              <button onClick={() => setShowUploadMeta(false)} className="text-xs text-muted-foreground hover:underline">
-                Cancelar
-              </button>
+            <div className="flex flex-col gap-4">
+              <label className="flex items-center justify-center gap-3 h-24 rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer text-sm text-muted-foreground transition-colors bg-muted/20">
+                <Upload className="h-5 w-5 text-primary" />
+                <div className="text-left">
+                  <span className="block font-medium text-foreground">
+                    {uploadRef.current?.files?.[0]?.name || 'Clique para selecionar o arquivo'}
+                  </span>
+                  <span className="text-xs">Tamanho máximo: 50MB</span>
+                </div>
+                <input
+                  ref={uploadRef}
+                  type="file"
+                  className="hidden"
+                  onChange={() => {
+                    // Força re-render para mostrar nome do arquivo
+                    setUploadMeta({ ...uploadMeta });
+                  }}
+                />
+              </label>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowUploadMeta(false)}
+                  className="h-10 px-4 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    const f = uploadRef.current?.files?.[0];
+                    if (!f) {
+                      toast.error('Selecione um arquivo primeiro');
+                      return;
+                    }
+                    upload.mutate(f);
+                  }}
+                  disabled={upload.isPending}
+                  className="h-10 px-6 rounded-lg gradient-brand text-primary-foreground text-sm font-medium shadow-sm disabled:opacity-50"
+                >
+                  {upload.isPending ? 'Enviando...' : 'Confirmar e Enviar'}
+                </button>
+              </div>
             </div>
           </div>
         )}
