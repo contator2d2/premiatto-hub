@@ -104,3 +104,26 @@ body {
   color: var(--foreground);
   background: transparent;
 }
+
+/* DOCX Preview Styles */
+.docx-container {
+  padding: 0 !important;
+}
+.docx-preview-container {
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 20px !important;
+}
+.docx-preview-container > section {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
+  margin-bottom: 2rem !important;
+}
+
+/* Excel Preview Styles */
+.excel-container table {
+  background: white;
+}
+.excel-container td {
+  border: 1px solid var(--border);
+  min-width: 80px;
+}
