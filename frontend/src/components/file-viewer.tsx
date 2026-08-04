@@ -3,6 +3,7 @@ import { Document as PdfDocument, Page as PdfPage, pdfjs } from 'react-pdf';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, AlertCircle, Loader2 } from 'lucide-react';
 import { renderAsync } from 'docx-preview';
 import * as XLSX from 'xlsx';
+import { getAccessToken } from '@/lib/api';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -62,7 +63,11 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(fileUrl);
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(fileUrl, { headers });
       const blob = await response.blob();
       docxRef.current.innerHTML = '';
       await renderAsync(blob, docxRef.current, undefined, {
@@ -84,7 +89,11 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(fileUrl);
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(fileUrl, { headers });
       const arrayBuffer = await response.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer);
       const firstSheetName = workbook.SheetNames[0];
