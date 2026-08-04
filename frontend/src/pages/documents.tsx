@@ -74,6 +74,7 @@ const extTint = (name: string) => {
   if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'bg-emerald-100 text-emerald-600';
   if (ext === 'ppt' || ext === 'pptx') return 'bg-orange-100 text-orange-600';
   if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext || '')) return 'bg-violet-100 text-violet-600';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) return 'bg-amber-100 text-amber-600';
   return 'bg-slate-100 text-slate-600';
 };
 const extLabel = (name: string) => (name.split('.').pop() || 'doc').toUpperCase().slice(0, 4);
