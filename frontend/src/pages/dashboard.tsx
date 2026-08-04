@@ -246,7 +246,11 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {(stats?.topDocs ?? []).slice(0, 5).map((d, idx) => (
-                  <tr key={d.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                  <tr 
+                    key={d.id} 
+                    className="border-t border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/documents?doc=${d.id}`}
+                  >
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-3">
                         <FileIcon name={d.name} className="h-9 w-9" />

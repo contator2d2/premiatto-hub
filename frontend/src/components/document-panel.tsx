@@ -33,6 +33,11 @@ export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab ?? 'overview');
+
+  useEffect(() => {
+    setTab(initialTab ?? 'overview');
+  }, [initialTab, documentId]);
+
   const [showShare, setShowShare] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
   const [shareChooser, setShareChooser] = useState(false);
@@ -254,7 +259,7 @@ export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
           {tab === 'overview' && (
             <>
               <FileViewer
-                fileUrl={doc.filePath}
+                fileUrl={assetUrl(doc.filePath) || ''}
                 fileType={doc.fileType}
                 mimeType={doc.mimeType}
                 allowDownload={doc.allowDownload}
