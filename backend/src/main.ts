@@ -21,10 +21,19 @@ async function bootstrap() {
   }
 
   app.enableCors({ 
-    origin: origins, 
+    origin: (origin, callback) => {
+      if (!origin || origins.includes(origin)) {
+        callback(null, true);
+      } else if (origin.includes('.easypanel.host')) {
+        callback(null, true);
+      } else {
+        callback(null, false);
+      }
+    },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    allowedHeaders: 'Content-Type, Accept, Authorization, Range, X-Requested-With',
+    exposedHeaders: 'Content-Range, Content-Length, Content-Disposition',
   });
 
   const port = parseInt(process.env.PORT || '3000', 10);
