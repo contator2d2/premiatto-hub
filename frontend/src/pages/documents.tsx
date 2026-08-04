@@ -38,6 +38,7 @@ import { api, downloadDocument } from '@/lib/api';
 import { DocumentPanel, type PanelTab } from '@/components/document-panel';
 import { ShareInternalModal } from '@/components/share-internal-modal';
 import { ShareExternalModal } from '@/components/share-external-modal';
+import { FileIcon } from '@/components/file-icon';
 import { cn } from '@/lib/utils';
 
 type Scope = 'all' | 'shared-with-me' | 'shared-by-me' | 'official' | 'pending-ack' | 'favorites' | 'recent' | 'trash';
@@ -73,6 +74,7 @@ const extTint = (name: string) => {
   if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'bg-emerald-100 text-emerald-600';
   if (ext === 'ppt' || ext === 'pptx') return 'bg-orange-100 text-orange-600';
   if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'gif'].includes(ext || '')) return 'bg-violet-100 text-violet-600';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext || '')) return 'bg-amber-100 text-amber-600';
   return 'bg-slate-100 text-slate-600';
 };
 const extLabel = (name: string) => (name.split('.').pop() || 'doc').toUpperCase().slice(0, 4);
@@ -576,13 +578,11 @@ export default function DocumentsPage() {
                     <button
                       key={d.id}
                       onClick={() => openPanel(d.id)}
-                      className="rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-primary/[0.02] transition-all"
+                      className="rounded-xl border border-border p-4 text-left hover:border-primary/40 hover:bg-primary/[0.02] transition-all group"
                     >
-                      <div className={`h-9 w-9 rounded-lg ${extTint(d.name)} flex items-center justify-center text-[10px] font-bold`}>
-                        {extLabel(d.name)}
-                      </div>
-                      <div className="mt-3 text-sm font-medium truncate">{d.name}</div>
-                      <div className="text-xs text-muted-foreground">v{d.version} · {relativeDate(d.updatedAt)}</div>
+                      <FileIcon name={d.name} className="h-12 w-12 mb-3 shadow-sm group-hover:scale-110 transition-transform" />
+                      <div className="text-sm font-medium truncate">{d.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1 truncate">v{d.version} · {relativeDate(d.updatedAt)}</div>
                     </button>
                   ))}
                 </div>
@@ -627,9 +627,7 @@ export default function DocumentsPage() {
                         <tr key={d.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => openPanel(d.id)}>
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className={`h-7 w-7 rounded ${extTint(d.name)} flex items-center justify-center text-[9px] font-bold shrink-0`}>
-                                {extLabel(d.name)}
-                              </div>
+                              <FileIcon name={d.name} className="h-8 w-8" />
                               <span className="font-medium truncate">{d.name}</span>
                               {d.isOfficial && (
                                 <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-semibold shrink-0">

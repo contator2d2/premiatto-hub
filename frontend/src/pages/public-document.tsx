@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Lock, ShieldCheck, BadgeCheck, Building2, Download } from 'lucide-react';
+import { Lock, ShieldCheck, BadgeCheck, Building2, Download, FileText } from 'lucide-react';
 import { api, setAccessToken } from '@/lib/api';
 import { FileViewer } from '@/components/file-viewer';
+import { FileIcon } from '@/components/file-icon';
 
 // Public page reachable at /p/:token — no auth.
 export default function PublicDocumentPage() {
@@ -83,10 +84,8 @@ export default function PublicDocumentPage() {
 
       <main className="max-w-4xl mx-auto p-6 lg:p-10 space-y-6">
         <div className="rounded-2xl border border-border bg-card p-6 lg:p-8">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <BadgeCheck className="h-5 w-5" />
-            </div>
+          <div className="flex items-start gap-4">
+            <FileIcon name={info.documentName} className="h-12 w-12" />
             <div className="min-w-0">
               <h1 className="text-xl font-semibold font-display truncate">{info.documentName}</h1>
               <p className="text-sm text-muted-foreground mt-1">
