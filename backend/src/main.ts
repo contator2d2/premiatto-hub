@@ -22,21 +22,17 @@ async function bootstrap() {
 
   app.enableCors({ 
     origin: (origin, callback) => {
-      // Se a origem for nula (ex: download direto) ou estiver na lista de permitidas
       if (!origin || origins.includes(origin)) {
         callback(null, true);
+      } else if (origin.includes('.easypanel.host')) {
+        callback(null, true);
       } else {
-        // Em desenvolvimento, as vezes o Easypanel muda o subdominio ou usa preview
-        if (process.env.NODE_ENV !== 'production' || origin.endsWith('.easypanel.host')) {
-          callback(null, true);
-        } else {
-          callback(null, false);
-        }
+        callback(null, false);
       }
     },
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: 'Content-Type, Accept, Authorization, Range',
+    allowedHeaders: 'Content-Type, Accept, Authorization, Range, X-Requested-With',
     exposedHeaders: 'Content-Range, Content-Length, Content-Disposition',
   });
 
