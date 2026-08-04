@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+// @ts-ignore - pdfjs types are tricky with workers in vite
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
