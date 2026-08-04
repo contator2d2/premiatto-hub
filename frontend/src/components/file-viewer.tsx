@@ -99,13 +99,15 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
 
       const response = await fetch(fileUrl, { headers });
       const blob = await response.blob();
-      docxRef.current.innerHTML = '';
-      await renderAsync(blob, docxRef.current, undefined, {
-        className: 'docx-preview-container',
-        inWrapper: true,
-        ignoreHeight: false,
-        ignoreWidth: false,
-      });
+      if (docxRef.current) {
+        docxRef.current.innerHTML = '';
+        await renderAsync(blob, docxRef.current, undefined, {
+          className: 'docx-preview-container',
+          inWrapper: true,
+          ignoreHeight: false,
+          ignoreWidth: false,
+        });
+      }
     } catch (err) {
       console.error('Docx preview error:', err);
       setError('Não foi possível carregar a prévia do documento Word.');
