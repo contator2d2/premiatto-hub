@@ -254,7 +254,7 @@ export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
           {tab === 'overview' && (
             <>
               <FileViewer
-                fileUrl={doc.filePath}
+                fileUrl={assetUrl(doc.filePath) || ''}
                 fileType={doc.fileType}
                 mimeType={doc.mimeType}
                 allowDownload={doc.allowDownload}

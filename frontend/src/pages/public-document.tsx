@@ -144,7 +144,7 @@ export default function PublicDocumentPage() {
         {opened && (
           <div className="space-y-5">
             <FileViewer
-              fileUrl={opened.filePath}
+              fileUrl={assetUrl(opened.filePath) || ''}
               fileType={opened.fileType}
               mimeType={opened.mimeType}
               allowDownload={opened.allowDownload}
