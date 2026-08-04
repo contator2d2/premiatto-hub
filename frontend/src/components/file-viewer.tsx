@@ -300,8 +300,8 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
           <PdfDocument
             file={{
               url: fileUrl,
-              httpHeaders: (getAccessToken() ? { 'Authorization': `Bearer ${getAccessToken()}` } : {}) as any
-            }}
+              httpHeaders: getAccessToken() ? { 'Authorization': `Bearer ${getAccessToken()}` } : {}
+            } as any}
             onLoadSuccess={({ numPages }: { numPages: number }) => setNumPages(numPages)}
             loading={<div className="text-sm text-muted-foreground p-20 flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Carregando PDF…</div>}
             error={<div className="text-sm text-destructive p-20">Não foi possível abrir este PDF.</div>}
