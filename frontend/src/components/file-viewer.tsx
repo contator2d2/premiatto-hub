@@ -96,7 +96,9 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
     setError(null);
     try {
       const token = getAccessToken();
-      const headers: Record<string, string> = {};
+      const headers: Record<string, string> = {
+        'X-Requested-With': 'XMLHttpRequest'
+      };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const response = await fetch(fileUrl, { headers });
