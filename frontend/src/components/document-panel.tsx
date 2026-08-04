@@ -33,6 +33,11 @@ export function DocumentPanel({ documentId, onClose, initialTab }: Props) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [tab, setTab] = useState<Tab>(initialTab ?? 'overview');
+
+  useEffect(() => {
+    setTab(initialTab ?? 'overview');
+  }, [initialTab, documentId]);
+
   const [showShare, setShowShare] = useState(false);
   const [showExternal, setShowExternal] = useState(false);
   const [shareChooser, setShareChooser] = useState(false);
