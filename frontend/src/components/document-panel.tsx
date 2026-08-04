@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
@@ -17,7 +17,7 @@ import {
   Users2,
   Trash2,
 } from 'lucide-react';
-import { api, downloadDocument } from '@/lib/api';
+import { api, downloadDocument, assetUrl } from '@/lib/api';
 import { FileViewer } from './file-viewer';
 import { ShareInternalModal } from './share-internal-modal';
 import { ShareExternalModal } from './share-external-modal';

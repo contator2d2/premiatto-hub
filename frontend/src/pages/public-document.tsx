@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Lock, ShieldCheck, BadgeCheck, Building2, Download, FileText } from 'lucide-react';
-import { api, setAccessToken } from '@/lib/api';
+import { api, setAccessToken, assetUrl } from '@/lib/api';
 import { FileViewer } from '@/components/file-viewer';
 import { FileIcon } from '@/components/file-icon';
 
