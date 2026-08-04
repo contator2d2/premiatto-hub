@@ -29,6 +29,7 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
   const [scale, setScale] = useState(1.2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
   
   const docxRef = useRef<HTMLDivElement>(null);
   const excelRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,37 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
       renderDocx();
     } else if (isExcel && excelRef.current) {
       renderExcel();
+    } else if (isImage) {
+      renderImage();
     }
-  }, [fileUrl, isDocx, isExcel]);
+  }, [fileUrl, isDocx, isExcel, isImage]);
+
+  async function renderImage() {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = getAccessToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(fileUrl, { headers });
+      if (!response.ok) throw new Error('Falha ao carregar imagem');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setImgUrl(url);
+    } catch (err) {
+      console.error('Image preview error:', err);
+      setError('Não foi possível carregar a imagem.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (imgUrl) URL.revokeObjectURL(imgUrl);
+    };
+  }, [imgUrl]);
 
   async function renderDocx() {
     if (!docxRef.current) return;
@@ -156,7 +186,7 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
             {watermark}
           </div>
         )}
-        <img src={fileUrl} alt="" className="max-h-[80vh] max-w-full object-contain relative z-0" />
+        {imgUrl && <img src={imgUrl} alt="" className="max-h-[80vh] max-w-full object-contain relative z-0" />}
       </div>
     );
   }
@@ -268,7 +298,10 @@ export function FileViewer({ fileUrl, fileType, mimeType, allowDownload, blockPr
         )}
         <div className="bg-white shadow-xl">
           <PdfDocument
-            file={fileUrl}
+            file={{
+              url: fileUrl,
+              httpHeaders: getAccessToken() ? { 'Authorization': `Bearer ${getAccessToken()}` } : {}
+            }}
             onLoadSuccess={({ numPages }: { numPages: number }) => setNumPages(numPages)}
             loading={<div className="text-sm text-muted-foreground p-20 flex items-center gap-2"><Loader2 className="h-5 w-5 animate-spin" /> Carregando PDF…</div>}
             error={<div className="text-sm text-destructive p-20">Não foi possível abrir este PDF.</div>}
