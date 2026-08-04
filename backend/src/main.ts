@@ -14,7 +14,18 @@ async function bootstrap() {
   const origins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
-  app.enableCors({ origin: origins, credentials: true });
+  
+  // Adiciona origens dinâmicas se estiver em produção para facilitar deploy no Easypanel
+  if (process.env.NODE_ENV === 'production') {
+    origins.push('https://ayratech-premiattoconnect-front.isyhhh.easypanel.host');
+  }
+
+  app.enableCors({ 
+    origin: origins, 
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+  });
 
   const port = parseInt(process.env.PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
